@@ -847,3 +847,126 @@ document.addEventListener('DOMContentLoaded', () => {
 // Expose for inline onclick handlers
 window.showIncidentDetail = showIncidentDetail;
 window.updateIncidentStatus = updateIncidentStatus;
+
+// --- Tasks & Members Additions ---
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Nav handling for Tasks page
+    const navLinks = document.querySelectorAll('.nav-link');
+    const pages = document.querySelectorAll('.page');
+    
+    // We already have a click handler for nav links in app.js, it might handle 'tasks' automatically if it just reads data-page.
+    // Let's make sure tasks load when clicked
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const pageId = e.currentTarget.getAttribute('data-page');
+            if (pageId === 'tasks') {
+                loadTasks();
+            }
+        });
+    });
+
+    // Modals
+    const addMemberModal = document.getElementById('add-member-modal');
+    const assignTaskModal = document.getElementById('assign-task-modal');
+    
+    document.getElementById('add-member-btn')?.addEventListener('click', () => {
+        addMemberModal.classList.add('active');
+    });
+    document.getElementById('close-add-member-modal')?.addEventListener('click', () => {
+        addMemberModal.classList.remove('active');
+    });
+    
+    document.getElementById('assign-task-btn')?.addEventListener('click', () => {
+        assignTaskModal.classList.add('active');
+    });
+    document.getElementById('close-assign-task-modal')?.addEventListener('click', () => {
+        assignTaskModal.classList.remove('active');
+    });
+
+    // Forms
+    document.getElementById('add-member-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            username: document.getElementById('member-username').value,
+            full_name: document.getElementById('member-fullname').value,
+            department: document.getElementById('member-department').value,
+            role: document.getElementById('member-role').value,
+            email: document.getElementById('member-email').value,
+            password: document.getElementById('member-password').value
+        };
+        try {
+            const res = await fetch('/api/members', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                alert('Member created!');
+                addMemberModal.classList.remove('active');
+                e.target.reset();
+            } else {
+                const err = await res.json();
+                alert('Error: ' + err.error);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    document.getElementById('assign-task-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            user_id: parseInt(document.getElementById('task-user-id').value),
+            title: document.getElementById('task-title').value,
+            description: document.getElementById('task-description').value
+        };
+        try {
+            const res = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                alert('Task assigned!');
+                assignTaskModal.classList.remove('active');
+                e.target.reset();
+                loadTasks();
+            } else {
+                const err = await res.json();
+                alert('Error: ' + err.error);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    async function loadTasks() {
+        const tbody = document.getElementById('tasks-body');
+        if (!tbody) return;
+        try {
+            const res = await fetch('/api/tasks');
+            const tasks = await res.json();
+            tbody.innerHTML = '';
+            if(tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No tasks found</td></tr>';
+                return;
+            }
+            tasks.forEach(task => {
+                const statusClass = task.status === 'Completed' ? 'status-normal' : 'status-warning';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${task.id}</td>
+                        <td>${task.full_name} (${task.username})</td>
+                        <td>${task.title}</td>
+                        <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+                        <td>${task.created_at}</td>
+                    </tr>
+                `;
+            });
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Error loading tasks</td></tr>';
+        }
+    }
+});

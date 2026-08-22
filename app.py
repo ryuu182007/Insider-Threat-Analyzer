@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from backend.routes.api import api_bp
+from backend.services.data_service import verify_login
 from database.init_db import init_database
 
 app = Flask(__name__)
@@ -15,25 +16,28 @@ app.config['JSON_SORT_KEYS'] = False
 # Secret key for session management (change this in production)
 app.secret_key = 'itds-secret-key-2024'
 
-# Analyst credentials (single-user demo login)
-ANALYST_USERNAME = 'ryuu'
-ANALYST_PASSWORD = 'ryuu07'
-
 # Register API blueprint
 app.register_blueprint(api_bp, url_prefix='/api')
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Analyst login page."""
+    """Login page."""
     error = None
     username_val = ''
     if request.method == 'POST':
         username_val = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
-        if username_val == ANALYST_USERNAME and password == ANALYST_PASSWORD:
+        
+        user = verify_login(username_val, password)
+        if user:
             session['analyst'] = username_val
-            return redirect(url_for('index'))
+            session['is_admin'] = user['is_admin']
+            session['user_id'] = user['id']
+            if user['is_admin'] == 1:
+                return redirect(url_for('index'))
+            else:
+                return redirect(url_for('member_dashboard'))
         else:
             error = 'Invalid username or password. Please try again.'
     return render_template('login.html', error=error, username_val=username_val)
@@ -48,10 +52,22 @@ def logout():
 
 @app.route('/')
 def index():
-    """Main dashboard – requires login."""
+    """Main dashboard – requires admin login."""
     if 'analyst' not in session:
         return redirect(url_for('login'))
+    if session.get('is_admin') != 1:
+        return redirect(url_for('member_dashboard'))
     return render_template('index.html')
+
+
+@app.route('/member')
+def member_dashboard():
+    """Member dashboard – requires login."""
+    if 'analyst' not in session:
+        return redirect(url_for('login'))
+    if session.get('is_admin') == 1:
+        return redirect(url_for('index'))
+    return render_template('member.html', username=session['analyst'])
 
 
 def main():

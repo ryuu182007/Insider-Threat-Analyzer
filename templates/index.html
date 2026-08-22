@@ -41,6 +41,9 @@
                 <li><a href="#" class="nav-link" data-page="threats">
                         <i data-lucide="radar"></i> Threat Radar
                     </a></li>
+                <li><a href="#" class="nav-link" data-page="tasks">
+                        <i data-lucide="check-square"></i> Tasks
+                    </a></li>
                 <li><a href="#" class="nav-link" data-page="settings">
                         <i data-lucide="settings-2"></i> System Config
                     </a></li>
@@ -216,6 +219,9 @@
                             <option value="high">High (60-79)</option>
                             <option value="critical">Critical (80+)</option>
                         </select>
+                        <button id="add-member-btn" class="btn-primary" style="margin-left: 10px;">
+                            <i data-lucide="user-plus"></i> Add Member
+                        </button>
                     </div>
                 </div>
                 <div class="panel">
@@ -373,6 +379,36 @@
                             </thead>
                             <tbody id="top-risky-body">
                                 <tr><td colspan="4" class="loading-cell">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tasks Monitoring -->
+            <section id="page-tasks" class="page">
+                <div class="page-header">
+                    <h2>Task Monitoring</h2>
+                    <div class="filters">
+                        <button id="assign-task-btn" class="btn-primary">
+                            <i data-lucide="plus-circle"></i> Assign Task
+                        </button>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="table-wrap">
+                        <table class="data-table" id="tasks-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Assigned To</th>
+                                    <th>Task</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasks-body">
+                                <tr><td colspan="5" class="loading-cell">Loading tasks…</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -659,8 +695,70 @@
                 </div>
             </section>
         </main>
-    </div>
+        <div class="modal" id="add-member-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Add New Member</h3>
+                    <button class="modal-close" id="close-add-member-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-member-form">
+                        <div style="margin-bottom: 15px;">
+                            <label>Username</label>
+                            <input type="text" id="member-username" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Full Name</label>
+                            <input type="text" id="member-fullname" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Department</label>
+                            <input type="text" id="member-department" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Role</label>
+                            <input type="text" id="member-role" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Email</label>
+                            <input type="email" id="member-email" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Password</label>
+                            <input type="password" id="member-password" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%;">Create Member</button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
+        <div class="modal" id="assign-task-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Assign Task</h3>
+                    <button class="modal-close" id="close-assign-task-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="assign-task-form">
+                        <div style="margin-bottom: 15px;">
+                            <label>Assignee (User ID)</label>
+                            <input type="number" id="task-user-id" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Title</label>
+                            <input type="text" id="task-title" class="filter-input" style="width: 100%" required>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Description</label>
+                            <textarea id="task-description" class="filter-input" style="width: 100%; height: 80px;" required></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%;">Assign Task</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="/static/js/app.js"></script>
 </body>
 

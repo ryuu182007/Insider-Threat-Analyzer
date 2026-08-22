@@ -124,3 +124,57 @@ def threat_analysis():
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/members', methods=['POST'])
+def add_member():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+        
+        user_id, error = data_service.create_member(data)
+        if error:
+            return jsonify({'error': error}), 400
+        
+        return jsonify({'message': 'Member created successfully', 'id': user_id}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tasks', methods=['GET', 'POST'])
+def manage_tasks():
+    try:
+        if request.method == 'GET':
+            tasks = data_service.get_all_tasks()
+            return jsonify(tasks)
+        elif request.method == 'POST':
+            data = request.get_json()
+            task_id, error = data_service.create_task(data)
+            if error:
+                return jsonify({'error': error}), 400
+            return jsonify({'message': 'Task created', 'id': task_id}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tasks/me', methods=['GET'])
+def get_my_tasks():
+    from flask import session
+    try:
+        if 'analyst' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        tasks = data_service.get_tasks_for_user(session['analyst'])
+        return jsonify(tasks)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    try:
+        data = request.get_json()
+        if not data or 'status' not in data:
+            return jsonify({'error': 'Status required'}), 400
+        success, error = data_service.update_task_status(task_id, data['status'])
+        if not success:
+            return jsonify({'error': error}), 400
+        return jsonify({'message': 'Task updated'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

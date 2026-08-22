@@ -299,3 +299,94 @@ def get_threat_analysis():
         }
     finally:
         conn.close()
+
+def verify_login(username, password):
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
+        return dict_from_row(user)
+    finally:
+        conn.close()
+
+def create_member(data):
+    conn = get_db()
+    try:
+        required = ['username', 'full_name', 'department', 'role', 'email', 'password']
+        for field in required:
+            if field not in data or not data[field]:
+                return None, f'Missing required field: {field}'
+        
+        cursor = conn.execute('''
+            INSERT INTO users (username, full_name, department, role, email, password, is_admin)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+        ''', (
+            data['username'],
+            data['full_name'],
+            data['department'],
+            data['role'],
+            data['email'],
+            data['password']
+        ))
+        conn.commit()
+        return cursor.lastrowid, None
+    except sqlite3.IntegrityError:
+        return None, 'Username already exists'
+    finally:
+        conn.close()
+
+def get_all_tasks():
+    conn = get_db()
+    try:
+        rows = conn.execute('''
+            SELECT t.*, u.username, u.full_name 
+            FROM tasks t
+            JOIN users u ON t.user_id = u.id
+            ORDER BY t.created_at DESC
+        ''').fetchall()
+        return [dict_from_row(r) for r in rows]
+    finally:
+        conn.close()
+
+def get_tasks_for_user(username):
+    conn = get_db()
+    try:
+        rows = conn.execute('''
+            SELECT t.* 
+            FROM tasks t
+            JOIN users u ON t.user_id = u.id
+            WHERE u.username = ?
+            ORDER BY t.created_at DESC
+        ''', (username,)).fetchall()
+        return [dict_from_row(r) for r in rows]
+    finally:
+        conn.close()
+
+def create_task(data):
+    conn = get_db()
+    try:
+        required = ['user_id', 'title']
+        for field in required:
+            if field not in data or not data[field]:
+                return None, f'Missing required field: {field}'
+                
+        cursor = conn.execute('''
+            INSERT INTO tasks (user_id, title, description, status)
+            VALUES (?, ?, ?, 'Pending')
+        ''', (
+            data['user_id'],
+            data['title'],
+            data.get('description', '')
+        ))
+        conn.commit()
+        return cursor.lastrowid, None
+    finally:
+        conn.close()
+
+def update_task_status(task_id, status):
+    conn = get_db()
+    try:
+        conn.execute('UPDATE tasks SET status = ? WHERE id = ?', (status, task_id))
+        conn.commit()
+        return True, None
+    finally:
+        conn.close()

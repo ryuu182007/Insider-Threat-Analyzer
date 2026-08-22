@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Dashboard - Insider Threat System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/member.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">
+                    <i data-lucide="shield"></i>
+                </div>
+                <div>
+                    <span class="logo-text">THREAT SYSTEM</span>
+                    <span class="logo-sub">Member Portal</span>
+                </div>
+            </div>
+            <ul class="nav-list">
+                <li>
+                    <a href="/member" class="nav-link active" data-page="tasks">
+                        <i data-lucide="check-square"></i> My Tasks
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/logout" class="logout-btn" style="width: 100%; justify-content: center; margin-top: 10px;">
+                    <i data-lucide="log-out"></i> Logout
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-left">
+                    <h1>MEMBER DASHBOARD</h1>
+                    <p class="subtitle">Task & Assignment Portal</p>
+                </div>
+                <div class="header-center">
+                </div>
+                <div class="header-right">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span id="system-status">Portal Active</span>
+                    </div>
+                    <div class="analyst-chip">
+                        <div class="analyst-avatar" id="analyst-initials">M</div>
+                        <div class="analyst-profile">
+                            <span class="analyst-name">{{ username | upper }}</span>
+                            <span class="analyst-role">Team Member</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="member-top-nav">
+                <div class="breadcrumb">
+                    <span>Member Area</span>
+                    <i data-lucide="chevron-right" class="breadcrumb-separator"></i>
+                    <span class="current">My Tasks</span>
+                </div>
+            </div>
+
+            <section class="page active">
+                <div class="panel">
+                    <h2 class="panel-title">Assigned Tasks</h2>
+                    <ul class="task-list" id="taskList">
+                        <!-- Tasks will be loaded here via JS -->
+                        <div class="loading-cell" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                            Loading tasks...
+                        </div>
+                    </ul>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        async function loadTasks() {
+            try {
+                const response = await fetch('/api/tasks/me');
+                const tasks = await response.json();
+                
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = '';
+                
+                if (tasks.length === 0) {
+                    taskList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">No tasks assigned.</p>';
+                    return;
+                }
+
+                tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = 'task-item';
+                    
+                    const isCompleted = task.status === 'Completed';
+                    const statusClass = isCompleted ? 'status-completed' : 'status-pending';
+                    
+                    li.innerHTML = `
+                        <div class="task-info">
+                            <h4>${task.title}</h4>
+                            <p>${task.description || 'No description provided.'}</p>
+                        </div>
+                        <div class="task-actions">
+                            <span class="task-status ${statusClass}">${task.status}</span>
+                            ${!isCompleted ? `<button class="btn-complete" onclick="completeTask(${task.id})">Mark Complete</button>` : ''}
+                        </div>
+                    `;
+                    taskList.appendChild(li);
+                });
+            } catch (err) {
+                console.error("Error loading tasks", err);
+                document.getElementById('taskList').innerHTML = '<p style="color: var(--danger); text-align: center; padding: 2rem;">Error loading tasks.</p>';
+            }
+        }
+
+        async function completeTask(taskId) {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'Completed' })
+                });
+                if (response.ok) {
+                    loadTasks();
+                } else {
+                    alert("Failed to update task.");
+                }
+            } catch (err) {
+                console.error("Error updating task", err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadTasks);
+    </script>
+</body>
+</html>

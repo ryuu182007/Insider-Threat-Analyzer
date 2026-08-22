@@ -22,7 +22,19 @@ def create_tables(conn):
             status TEXT DEFAULT 'active',
             risk_score INTEGER DEFAULT 0,
             last_activity TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TEXT DEFAULT (datetime('now')),
+            password TEXT,
+            is_admin INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT DEFAULT 'Pending',
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS activity_logs (
@@ -56,16 +68,19 @@ def create_tables(conn):
 
 def seed_users():
     return [
-        ('rkumar', 'Rahul Kumar', 'Engineering', 'Developer', 'rkumar@corp.local', 'active', 12, '2026-08-17 14:30:00'),
-        ('ppatel', 'Priya Patel', 'Finance', 'Analyst', 'ppatel@corp.local', 'active', 45, '2026-08-17 13:15:00'),
-        ('asharma', 'Amit Sharma', 'HR', 'Manager', 'asharma@corp.local', 'active', 8, '2026-08-17 11:00:00'),
-        ('ssingh', 'Suresh Singh', 'Engineering', 'Senior Developer', 'ssingh@corp.local', 'active', 72, '2026-08-17 22:45:00'),
-        ('nreddy', 'Neha Reddy', 'IT', 'Sysadmin', 'nreddy@corp.local', 'active', 55, '2026-08-17 09:30:00'),
-        ('mmishra', 'Manish Mishra', 'Marketing', 'Coordinator', 'mmishra@corp.local', 'active', 5, '2026-08-16 16:00:00'),
-        ('agupta', 'Aarti Gupta', 'Finance', 'Accountant', 'agupta@corp.local', 'active', 68, '2026-08-17 03:20:00'),
-        ('rdas', 'Rohan Das', 'Engineering', 'DevOps', 'rdas@corp.local', 'active', 22, '2026-08-17 10:45:00'),
-        ('vjain', 'Vikas Jain', 'Legal', 'Counsel', 'vjain@corp.local', 'active', 15, '2026-08-15 14:00:00'),
-        ('kjoshi', 'Kavita Joshi', 'IT', 'Security Analyst', 'kjoshi@corp.local', 'active', 10, '2026-08-17 15:00:00')
+        ('rkumar', 'Rahul Kumar', 'Engineering', 'Developer', 'rkumar@corp.local', 'active', 12, '2026-08-17 14:30:00', None, 0),
+        ('ppatel', 'Priya Patel', 'Finance', 'Analyst', 'ppatel@corp.local', 'active', 45, '2026-08-17 13:15:00', None, 0),
+        ('asharma', 'Amit Sharma', 'HR', 'Manager', 'asharma@corp.local', 'active', 8, '2026-08-17 11:00:00', None, 0),
+        ('ssingh', 'Suresh Singh', 'Engineering', 'Senior Developer', 'ssingh@corp.local', 'active', 72, '2026-08-17 22:45:00', None, 0),
+        ('nreddy', 'Neha Reddy', 'IT', 'Sysadmin', 'nreddy@corp.local', 'active', 55, '2026-08-17 09:30:00', None, 0),
+        ('mmishra', 'Manish Mishra', 'Marketing', 'Coordinator', 'mmishra@corp.local', 'active', 5, '2026-08-16 16:00:00', None, 0),
+        ('agupta', 'Aarti Gupta', 'Finance', 'Accountant', 'agupta@corp.local', 'active', 68, '2026-08-17 03:20:00', None, 0),
+        ('rdas', 'Rohan Das', 'Engineering', 'DevOps', 'rdas@corp.local', 'active', 22, '2026-08-17 10:45:00', None, 0),
+        ('vjain', 'Vikas Jain', 'Legal', 'Counsel', 'vjain@corp.local', 'active', 15, '2026-08-15 14:00:00', None, 0),
+        ('kjoshi', 'Kavita Joshi', 'IT', 'Security Analyst', 'kjoshi@corp.local', 'active', 10, '2026-08-17 15:00:00', None, 0),
+        ('ryuu', 'Admin Ryuu', 'Admin', 'Administrator', 'ryuu@corp.local', 'active', 0, '2026-08-17 14:30:00', 'ryuu07', 1),
+        ('aryan', 'Aryan', 'Engineering', 'Member', 'aryan@corp.local', 'active', 0, '2026-08-17 14:30:00', 'aryan07', 0),
+        ('swara', 'Swara', 'HR', 'Member', 'swara@corp.local', 'active', 0, '2026-08-17 14:30:00', 'swara07', 0)
     ]
 
 
@@ -151,8 +166,8 @@ def init_database():
     # Seed users
     users = seed_users()
     conn.executemany('''
-        INSERT INTO users (username, full_name, department, role, email, status, risk_score, last_activity)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (username, full_name, department, role, email, status, risk_score, last_activity, password, is_admin)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', users)
 
     user_ids = [row[0] for row in conn.execute('SELECT id FROM users').fetchall()]
@@ -165,11 +180,26 @@ def init_database():
     ''', activities)
 
     # Seed incidents
-    incidents = seed_incidents(user_ids)
+    incidents = seed_incidents(user_ids[:10]) # Only assign incidents to original 10 users
     conn.executemany('''
         INSERT INTO incidents (user_id, title, description, severity, risk_score, incident_type, status, detected_at, resolved_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', incidents)
+
+    # Seed initial tasks for aryan and swara
+    # We know aryan is user_id 12, swara is 13 based on insertion order (1 to 10 are employees, 11 is ryuu, 12 is aryan, 13 is swara)
+    tasks = [
+        (12, 'Review Security Policies', 'Read and acknowledge the new Q3 security policies.', 'Pending'),
+        (12, 'Update System Dependencies', 'Update npm dependencies for the frontend app.', 'Pending'),
+        (12, 'Share a file', 'Share a file with each other.', 'Pending'),
+        (13, 'Onboard New Employees', 'Prepare onboarding documents for next week.', 'Pending'),
+        (13, 'Quarterly HR Review', 'Complete the HR review forms.', 'Completed'),
+        (13, 'Share a file', 'Share a file with each other.', 'Pending')
+    ]
+    conn.executemany('''
+        INSERT INTO tasks (user_id, title, description, status)
+        VALUES (?, ?, ?, ?)
+    ''', tasks)
 
     conn.commit()
     conn.close()
@@ -177,6 +207,7 @@ def init_database():
     print(f'  - {len(users)} users')
     print(f'  - {len(activities)} activity logs')
     print(f'  - {len(incidents)} incidents')
+    print(f'  - {len(tasks)} tasks')
 
 
 if __name__ == '__main__':
