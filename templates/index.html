@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insider Threat Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Orbitron:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">
+                    <i data-lucide="shield"></i>
+                </div>
+                <div>
+                    <span class="logo-text">THREAT SYSTEM</span>
+                    <span class="logo-sub">Security Console</span>
+                </div>
+            </div>
+            <ul class="nav-list">
+                <li><a href="#" class="nav-link active" data-page="dashboard">
+                        <i data-lucide="layout-dashboard"></i> Command Center
+                    </a></li>
+                <li><a href="#" class="nav-link" data-page="users">
+                        <i data-lucide="users"></i> Subjects
+                    </a></li>
+                <li><a href="#" class="nav-link" data-page="activity">
+                        <i data-lucide="scroll-text"></i> Activity Logs
+                    </a></li>
+                <li><a href="#" class="nav-link" data-page="incidents">
+                        <i data-lucide="shield-alert"></i> Incidents
+                    </a></li>
+                <li><a href="#" class="nav-link" data-page="threats">
+                        <i data-lucide="radar"></i> Threat Radar
+                    </a></li>
+                <li><a href="#" class="nav-link" data-page="settings">
+                        <i data-lucide="settings-2"></i> System Config
+                    </a></li>
+            </ul>
+            <div class="sidebar-footer">Engine v1.0.0</div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-left">
+                    <h1>INSIDER THREAT SYSTEM</h1>
+                    <p class="subtitle">Security Operations Dashboard</p>
+                </div>
+                <div class="header-center">
+                    <div class="search-pill">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="global-search" placeholder="Search users, IPs, incidents…">
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span id="system-status">Operational</span>
+                    </div>
+                    <span class="last-updated" id="last-updated">--</span>
+                    <div class="analyst-chip">
+                        <div class="analyst-avatar" id="analyst-initials">SA</div>
+                        <div class="analyst-profile">
+                            <span class="analyst-name" id="analyst-name">{{ session.get('analyst', 'Analyst') | upper }}</span>
+                            <span class="analyst-role">Security Analyst</span>
+                        </div>
+                    </div>
+                    <a href="/logout" class="logout-btn" title="Sign out">
+                        <i data-lucide="log-out"></i> Logout
+                    </a>
+                </div>
+            </header>
+
+            <!-- Dashboard -->
+            <section id="page-dashboard" class="page active">
+                <div class="summary-cards">
+                    <div class="card stat-card">
+                        <div class="stat-icon-wrap"><i data-lucide="users"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Total Users</span>
+                            <span class="stat-value" id="stat-total-users">--</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon-wrap"><i data-lucide="user-check"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Active Users</span>
+                            <span class="stat-value" id="stat-active-users">--</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon-wrap"><i data-lucide="eye"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Suspicious</span>
+                            <span class="stat-value warning" id="stat-suspicious">--</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon-wrap"><i data-lucide="alert-triangle"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Open Incidents</span>
+                            <span class="stat-value danger" id="stat-incidents">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-main-grid">
+                    <!-- Security Posture -->
+                    <div class="panel posture-panel">
+                        <h2 class="panel-title">Security Posture</h2>
+                        <div class="posture-header">
+                            <div class="posture-avatar">
+                                <i data-lucide="shield-check"></i>
+                            </div>
+                            <div class="posture-info">
+                                <h3>Organization Monitor</h3>
+                                <div class="posture-stat-row">
+                                    <i data-lucide="building-2"></i>
+                                    <span>All Departments</span>
+                                </div>
+                                <div class="posture-stat-row">
+                                    <i data-lucide="activity"></i>
+                                    <span>Rule-Based Engine Active</span>
+                                </div>
+                                <div class="posture-stat-row">
+                                    <i data-lucide="clock"></i>
+                                    <span id="posture-time">Real-time monitoring</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="xp-bar-wrap">
+                            <div class="xp-bar-label">
+                                <span>Global Risk Score</span>
+                                <strong id="posture-risk-score">-- / 100</strong>
+                            </div>
+                            <div class="xp-bar">
+                                <div class="xp-bar-fill" id="posture-risk-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7-Day Anomaly Track -->
+                    <div class="panel chart-mini-panel">
+                        <h2 class="panel-title">7-Day Anomaly Track</h2>
+                        <canvas id="chart-dashboard-anomaly"></canvas>
+                    </div>
+
+                    <!-- Threat Vectors -->
+                    <div class="panel">
+                        <h2 class="panel-title">Threat Vectors</h2>
+                        <div class="vector-list" id="threat-vectors-list">
+                            <div class="loading-cell" style="padding:1rem;text-align:center;color:var(--text-muted)">Loading vectors…</div>
+                        </div>
+                    </div>
+
+                    <!-- Threat Level Ring -->
+                    <div class="panel threat-overview">
+                        <h2 class="panel-title">Threat Level</h2>
+                        <div class="threat-content">
+                            <div class="risk-ring-container">
+                                <svg class="risk-ring" viewBox="0 0 120 120">
+                                    <circle cx="60" cy="60" r="52" class="ring-bg" />
+                                    <circle cx="60" cy="60" r="52" class="ring-fill" id="risk-ring-fill" />
+                                </svg>
+                                <div class="risk-ring-label">
+                                    <span class="risk-level-text" id="threat-level">--</span>
+                                    <span class="risk-sub">Threat Level</span>
+                                </div>
+                            </div>
+                            <div class="threat-stats">
+                                <div class="threat-stat">
+                                    <span class="ts-label">Avg Risk Score</span>
+                                    <span class="ts-value" id="avg-risk">--</span>
+                                </div>
+                                <div class="threat-stat">
+                                    <span class="ts-label">High-Risk Users</span>
+                                    <span class="ts-value" id="high-risk-count">--</span>
+                                </div>
+                                <div class="threat-stat">
+                                    <span class="ts-label">Critical Incidents</span>
+                                    <span class="ts-value danger" id="critical-count">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alerts Feed -->
+                    <div class="panel span-full">
+                        <h2 class="panel-title">Recent Alerts</h2>
+                        <div class="activity-feed" id="activity-feed-list">
+                            <div class="loading-cell" style="padding:1rem;text-align:center;color:var(--text-muted)">Loading alerts…</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users -->
+            <section id="page-users" class="page">
+                <div class="page-header">
+                    <h2>Subject Monitoring</h2>
+                    <div class="filters">
+                        <input type="text" id="user-search" placeholder="Search users…" class="filter-input">
+                        <select id="user-risk-filter" class="filter-select">
+                            <option value="">All Risk Levels</option>
+                            <option value="low">Low (0-29)</option>
+                            <option value="medium">Medium (30-59)</option>
+                            <option value="high">High (60-79)</option>
+                            <option value="critical">Critical (80+)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="table-wrap">
+                        <table class="data-table" id="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Department</th>
+                                    <th>Role</th>
+                                    <th>Risk Score</th>
+                                    <th>Status</th>
+                                    <th>Last Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-body">
+                                <tr><td colspan="6" class="loading-cell">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal" id="user-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modal-user-name">User Details</h3>
+                            <button class="modal-close" id="close-user-modal">&times;</button>
+                        </div>
+                        <div class="modal-body" id="user-modal-body"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Activity Logs -->
+            <section id="page-activity" class="page">
+                <div class="page-header">
+                    <h2>Activity Logs</h2>
+                    <div class="filters">
+                        <input type="text" id="activity-search" placeholder="Search activities…" class="filter-input">
+                        <select id="activity-status-filter" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="normal">Normal</option>
+                            <option value="suspicious">Suspicious</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="table-wrap">
+                        <table class="data-table" id="activity-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Activity</th>
+                                    <th>IP Address</th>
+                                    <th>Device</th>
+                                    <th>Risk</th>
+                                    <th>Timestamp</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activity-body">
+                                <tr><td colspan="7" class="loading-cell">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Incidents -->
+            <section id="page-incidents" class="page">
+                <div class="page-header">
+                    <h2>Incident Management</h2>
+                    <div class="filters">
+                        <select id="incident-severity-filter" class="filter-select">
+                            <option value="">All Severity</option>
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="HIGH">High</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                        <select id="incident-status-filter" class="filter-select">
+                            <option value="">All Status</option>
+                            <option value="Open">Open</option>
+                            <option value="Investigating">Investigating</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="table-wrap">
+                        <table class="data-table" id="incidents-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Type</th>
+                                    <th>Severity</th>
+                                    <th>Risk</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="incidents-body">
+                                <tr><td colspan="8" class="loading-cell">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal" id="incident-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modal-incident-title">Incident Details</h3>
+                            <button class="modal-close" id="close-incident-modal">&times;</button>
+                        </div>
+                        <div class="modal-body" id="incident-modal-body"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Threat Analysis -->
+            <section id="page-threats" class="page">
+                <div class="page-header">
+                    <h2>Threat Radar</h2>
+                </div>
+                <div class="charts-grid">
+                    <div class="panel chart-panel">
+                        <h3 class="panel-title">Risk Distribution</h3>
+                        <canvas id="chart-risk-dist"></canvas>
+                    </div>
+                    <div class="panel chart-panel">
+                        <h3 class="panel-title">Incidents by Severity</h3>
+                        <canvas id="chart-incidents"></canvas>
+                    </div>
+                    <div class="panel chart-panel wide">
+                        <h3 class="panel-title">Activity by Category</h3>
+                        <canvas id="chart-activity"></canvas>
+                    </div>
+                    <div class="panel chart-panel wide">
+                        <h3 class="panel-title">Threat Activity (7 Days)</h3>
+                        <canvas id="chart-timeline"></canvas>
+                    </div>
+                </div>
+                <div class="panel" style="margin-top: 0.85rem;">
+                    <h3 class="panel-title">Top Risk Subjects</h3>
+                    <div class="table-wrap">
+                        <table class="data-table" id="top-risky-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Full Name</th>
+                                    <th>Department</th>
+                                    <th>Risk Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top-risky-body">
+                                <tr><td colspan="4" class="loading-cell">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings -->
+            <section id="page-settings" class="page">
+                <div class="page-header">
+                    <h2>System Configuration</h2>
+                </div>
+                <div class="settings-layout">
+                    <div class="settings-tabs">
+                        <button class="settings-tab active" data-settings-tab="account">
+                            <i data-lucide="user-cog"></i> Account
+                        </button>
+                        <button class="settings-tab" data-settings-tab="detection">
+                            <i data-lucide="scan-eye"></i> Detection Rules
+                        </button>
+                        <button class="settings-tab" data-settings-tab="alerts">
+                            <i data-lucide="bell-ring"></i> Notifications
+                        </button>
+                        <button class="settings-tab" data-settings-tab="system">
+                            <i data-lucide="server"></i> System
+                        </button>
+                        <button class="settings-tab" data-settings-tab="audit">
+                            <i data-lucide="list-tree"></i> Audit Log
+                        </button>
+                    </div>
+
+                    <div class="settings-content panel">
+                        <!-- Account -->
+                        <div class="settings-pane active" id="settings-account">
+                            <h3 class="panel-title">Analyst Account</h3>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="user"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Analyst Name</div>
+                                        <div class="setting-row-desc">Currently signed-in operator</div>
+                                    </div>
+                                </div>
+                                <span class="setting-row-value" id="settings-analyst-name">{{ session.get('analyst', 'Analyst') | upper }}</span>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="badge-check"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Role</div>
+                                        <div class="setting-row-desc">Access level for this session</div>
+                                    </div>
+                                </div>
+                                <span class="setting-row-value">Security Analyst</span>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="timer"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Session Timeout</div>
+                                        <div class="setting-row-desc">Auto logout after inactivity</div>
+                                    </div>
+                                </div>
+                                <select class="filter-select" id="setting-session-timeout">
+                                    <option value="30">30 minutes</option>
+                                    <option value="60" selected>60 minutes</option>
+                                    <option value="120">2 hours</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Detection Rules -->
+                        <div class="settings-pane" id="settings-detection">
+                            <h3 class="panel-title">Detection Rules &amp; Sensitivity</h3>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="key-round"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Failed Login Monitoring</div>
+                                        <div class="setting-row-desc">Detect repeated authentication failures</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked data-setting="failed_login">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="key-round"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Failed Login Threshold</div>
+                                        <div class="setting-row-desc">Attempts within 24 hours</div>
+                                    </div>
+                                </div>
+                                <div class="range-wrap">
+                                    <input type="range" class="range-input" min="1" max="10" value="3" id="setting-failed-threshold">
+                                    <span class="range-value" id="setting-failed-threshold-val">3</span>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="moon"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">After-Hours Access</div>
+                                        <div class="setting-row-desc">Window: 22:00 – 06:00</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked data-setting="after_hours">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="download-cloud"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Bulk Download Detection</div>
+                                        <div class="setting-row-desc">Flag mass file downloads</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked data-setting="bulk_download">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="upload"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Data Exfiltration Rules</div>
+                                        <div class="setting-row-desc">Monitor outbound data transfers</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked data-setting="exfiltration">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="gauge"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Auto-Incident Threshold</div>
+                                        <div class="setting-row-desc">Create incident when risk ≥</div>
+                                    </div>
+                                </div>
+                                <div class="range-wrap">
+                                    <input type="range" class="range-input" min="20" max="80" value="40" id="setting-incident-threshold">
+                                    <span class="range-value" id="setting-incident-threshold-val">40</span>
+                                </div>
+                            </div>
+                            <div class="settings-actions">
+                                <button class="btn btn-primary" id="settings-save-btn">Save Configuration</button>
+                                <button class="btn" id="settings-reset-btn">Reset Defaults</button>
+                            </div>
+                        </div>
+
+                        <!-- Notifications -->
+                        <div class="settings-pane" id="settings-alerts">
+                            <h3 class="panel-title">Notifications &amp; Refresh</h3>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="refresh-cw"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Dashboard Refresh Interval</div>
+                                        <div class="setting-row-desc">Auto-refresh command center data</div>
+                                    </div>
+                                </div>
+                                <select class="filter-select" id="setting-refresh-interval">
+                                    <option value="15">15 seconds</option>
+                                    <option value="30" selected>30 seconds</option>
+                                    <option value="60">60 seconds</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="bell"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Critical Alert Highlight</div>
+                                        <div class="setting-row-desc">Pulse animation on critical events</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked id="setting-critical-highlight">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="volume-2"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Sound on Critical</div>
+                                        <div class="setting-row-desc">Audio alert for critical incidents</div>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="setting-critical-sound">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- System -->
+                        <div class="settings-pane" id="settings-system">
+                            <h3 class="panel-title">System Health</h3>
+                            <div class="system-health">
+                                <div class="health-ring-wrap">
+                                    <svg viewBox="0 0 100 100" width="100" height="100">
+                                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(124,58,237,0.15)" stroke-width="8"/>
+                                        <circle cx="50" cy="50" r="42" fill="none" stroke="#c026d3" stroke-width="8"
+                                            stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="26.4"/>
+                                    </svg>
+                                    <div class="health-ring-label">
+                                        <span class="health-pct">98%</span>
+                                        <span class="health-sub">Health</span>
+                                    </div>
+                                </div>
+                                <div class="health-details">
+                                    <div class="health-detail-row"><span class="health-dot"></span> Database: SQLite (connected)</div>
+                                    <div class="health-detail-row"><span class="health-dot"></span> Detection Engine: Rule-based v1.0</div>
+                                    <div class="health-detail-row"><span class="health-dot"></span> Status: Operational</div>
+                                    <div class="health-detail-row"><span class="health-dot"></span> Last scan: <span id="settings-last-scan">--</span></div>
+                                </div>
+                            </div>
+                            <div class="setting-row" style="margin-top:1rem;">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="database"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Database</div>
+                                        <div class="setting-row-desc">Local SQLite storage</div>
+                                    </div>
+                                </div>
+                                <span class="setting-row-value">insider_threat.db</span>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-row-left">
+                                    <div class="setting-row-icon"><i data-lucide="cpu"></i></div>
+                                    <div>
+                                        <div class="setting-row-label">Detection Engine</div>
+                                        <div class="setting-row-desc">Transparent rule-based analysis</div>
+                                    </div>
+                                </div>
+                                <span class="setting-row-value">v1.0</span>
+                            </div>
+                        </div>
+
+                        <!-- Audit Log -->
+                        <div class="settings-pane" id="settings-audit">
+                            <h3 class="panel-title">Administrative Audit Log</h3>
+                            <div class="activity-feed audit-feed" id="audit-log-list">
+                                <div class="feed-item">
+                                    <div class="feed-icon normal"><i data-lucide="settings"></i></div>
+                                    <div class="feed-body">
+                                        <div class="feed-title">System initialized with default detection rules</div>
+                                        <div class="feed-meta">Engine startup · Rule-based v1.0</div>
+                                    </div>
+                                    <div class="feed-right">
+                                        <div class="feed-time">On boot</div>
+                                    </div>
+                                </div>
+                                <div class="feed-item">
+                                    <div class="feed-icon normal"><i data-lucide="database"></i></div>
+                                    <div class="feed-body">
+                                        <div class="feed-title">Database loaded — 15 users, 60 activity logs</div>
+                                        <div class="feed-meta">SQLite · Sample dataset</div>
+                                    </div>
+                                    <div class="feed-right">
+                                        <div class="feed-time">On boot</div>
+                                    </div>
+                                </div>
+                                <div class="feed-item">
+                                    <div class="feed-icon suspicious"><i data-lucide="user-check"></i></div>
+                                    <div class="feed-body">
+                                        <div class="feed-title">Analyst session started</div>
+                                        <div class="feed-meta">Authentication successful</div>
+                                    </div>
+                                    <div class="feed-right">
+                                        <div class="feed-time">This session</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
