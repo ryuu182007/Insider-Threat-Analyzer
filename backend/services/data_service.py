@@ -55,7 +55,7 @@ def get_dashboard_stats():
         conn.close()
 
 
-def get_all_users(search=None, risk_filter=None):
+def get_all_users(search=None, risk_filter=None, department_filter=None):
     conn = get_db()
     try:
         query = 'SELECT * FROM users WHERE 1=1'
@@ -76,9 +76,24 @@ def get_all_users(search=None, risk_filter=None):
             elif risk_filter == 'critical':
                 query += ' AND risk_score >= 80'
 
+        if department_filter:
+            query += ' AND LOWER(department) = LOWER(?)'
+            params.append(department_filter.strip())
+
         query += ' ORDER BY risk_score DESC'
         rows = conn.execute(query, params).fetchall()
         return [dict_from_row(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_departments():
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            'SELECT DISTINCT department FROM users WHERE department IS NOT NULL AND department != "" ORDER BY department ASC'
+        ).fetchall()
+        return [r['department'] for r in rows]
     finally:
         conn.close()
 
@@ -290,6 +305,18 @@ def get_threat_analysis():
             ORDER BY day
         ''').fetchall()
 
+        if not threats_timeline:
+            # Fallback to the latest 7 active days so the tracker is always live and on
+            threats_timeline = conn.execute('''
+                SELECT day, avg_risk, count FROM (
+                    SELECT DATE(timestamp) as day, AVG(risk_score) as avg_risk, COUNT(*) as count
+                    FROM activity_logs
+                    GROUP BY DATE(timestamp)
+                    ORDER BY day DESC
+                    LIMIT 7
+                ) ORDER BY day ASC
+            ''').fetchall()
+
         return {
             'risk_distribution': risk_dist,
             'incidents_by_severity': incidents_by_severity,
@@ -305,6 +332,60 @@ def verify_login(username, password):
     try:
         user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
         return dict_from_row(user)
+    finally:
+        conn.close()
+
+def reset_password(identity, new_password):
+    """Reset password for an existing user by username or email."""
+    conn = get_db()
+    try:
+        user = conn.execute(
+            'SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)',
+            (identity.strip(), identity.strip())
+        ).fetchone()
+        if not user:
+            return False, 'No account found with that username or email.'
+        
+        if len(new_password) < 4:
+            return False, 'Password must be at least 4 characters long.'
+
+        conn.execute('UPDATE users SET password = ? WHERE id = ?', (new_password, user['id']))
+        conn.commit()
+        return True, f"Password successfully updated for user '{user['username']}'."
+    except Exception as e:
+        return False, str(e)
+    finally:
+        conn.close()
+
+def get_daily_subject_tracker(department=None):
+    """Get daily threat tracker metrics for subjects / department."""
+    conn = get_db()
+    try:
+        where_dept = ""
+        params = []
+        if department and department.strip() and department.lower() != 'all':
+            where_dept = " AND LOWER(u.department) = LOWER(?)"
+            params.append(department.strip())
+
+        total_subjects = conn.execute(f"SELECT COUNT(*) as c FROM users u WHERE 1=1 {where_dept}", params).fetchone()['c']
+        avg_risk = conn.execute(f"SELECT AVG(risk_score) as avg FROM users u WHERE 1=1 {where_dept}", params).fetchone()['avg'] or 0
+        high_risk = conn.execute(f"SELECT COUNT(*) as c FROM users u WHERE risk_score >= 60 {where_dept}", params).fetchone()['c']
+
+        log_query = f"""
+            SELECT COUNT(*) as c FROM activity_logs a
+            JOIN users u ON a.user_id = u.id
+            WHERE a.status IN ('suspicious', 'critical') {where_dept}
+        """
+        daily_anomalies = conn.execute(log_query, params).fetchone()['c']
+
+        return {
+            'total_subjects': total_subjects,
+            'avg_risk': round(avg_risk, 1),
+            'high_risk': high_risk,
+            'daily_anomalies': daily_anomalies,
+            'tracker_status': 'ACTIVE',
+            'department': department or 'All'
+        }
     finally:
         conn.close()
 

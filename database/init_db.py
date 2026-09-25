@@ -106,7 +106,7 @@ def generate_activities(user_ids):
         ('data_exfiltration_attempt', 'Large data transfer to external destination', '10.0.1.{n}', 'WS-{n:03d}', 75, 'critical'),
     ]
 
-    base_time = datetime(2026, 8, 10)
+    base_time = datetime.now() - timedelta(days=6)
     for i in range(60):
         user_id = random.choice(user_ids)
         template = random.choice(activity_templates)

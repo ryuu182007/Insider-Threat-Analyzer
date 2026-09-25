@@ -20,11 +20,22 @@ def users():
     try:
         search = request.args.get('search', '')
         risk = request.args.get('risk', '')
+        department = request.args.get('department', '')
         result = data_service.get_all_users(
             search=search if search else None,
-            risk_filter=risk if risk else None
+            risk_filter=risk if risk else None,
+            department_filter=department if department else None
         )
         return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/departments')
+def departments():
+    try:
+        depts = data_service.get_departments()
+        return jsonify(depts)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -178,3 +189,40 @@ def update_task(task_id):
         return jsonify({'message': 'Task updated'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+
+        identity = data.get('identity', '').strip()
+        new_password = data.get('new_password', '').strip()
+        confirm_password = data.get('confirm_password', '').strip()
+
+        if not identity or not new_password:
+            return jsonify({'error': 'Username/Email and new password are required'}), 400
+
+        if new_password != confirm_password:
+            return jsonify({'error': 'Passwords do not match'}), 400
+
+        success, message = data_service.reset_password(identity, new_password)
+        if not success:
+            return jsonify({'error': message}), 400
+
+        return jsonify({'message': message, 'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/tracker/daily')
+def daily_tracker():
+    try:
+        department = request.args.get('department', '')
+        tracker_data = data_service.get_daily_subject_tracker(department=department)
+        return jsonify(tracker_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+

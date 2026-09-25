@@ -3,167 +3,553 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Insider Threat Detection System – Analyst Login">
+    <meta name="description" content="Insider Threat Detection System – Security Operations Login">
     <title>Login – Insider Threat Monitor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Orbitron:wght@600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/login.css">
 </head>
 <body>
 
-    <!-- Subtle animated grid background -->
-    <div class="bg-grid" aria-hidden="true"></div>
-    <!-- Soft radial glow -->
-    <div class="bg-glow" aria-hidden="true"></div>
+    <!-- Canvas Particle System Background Field (Heroic Particle Drift) -->
+    <canvas id="particle-canvas"></canvas>
 
-    <div class="login-wrapper">
-        <div class="login-card">
+    <!-- Matte Noise Texture Overlay -->
+    <div class="matte-noise" aria-hidden="true"></div>
 
-            <!-- Logo / Icon -->
-            <div class="card-icon" aria-hidden="true">
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    <circle cx="12" cy="11" r="2.5" fill="currentColor" stroke="none" opacity="0.6"/>
-                    <line x1="12" y1="13.5" x2="12" y2="16"/>
-                </svg>
-            </div>
+    <!-- Floating Top Bar -->
+    <header class="top-nav-bar">
+        <div class="brand-badge">
+            <span class="brand-dot"></span>
+            <span>THREAT SYSTEM</span>
+        </div>
+        <button id="themeToggleBtn" class="theme-toggle-floating" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+            <span id="themeToggleIcon">☀️</span>
+            <span id="themeToggleText">Light Mode</span>
+        </button>
+    </header>
 
-            <!-- Title -->
-            <h1 class="card-title">THREAT SYSTEM</h1>
-            <p class="card-subtitle">Sign in to access the Security Operations Console</p>
+    <!-- Gradient Border Shell -->
+    <div class="hero-wrapper">
+        <div class="gradient-shell">
+            <div class="hero-surface">
 
-            <!-- Flash messages from Flask -->
-            {% if error %}
-            <div class="alert alert-error" role="alert">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                {{ error }}
-            </div>
-            {% endif %}
+                <!-- Authentication Card & Forgot Password -->
+                <div class="hero-right-col">
+                    <div class="auth-box">
 
-            <!-- Login Form -->
-            <form id="loginForm" method="POST" action="/login" novalidate>
-                <div class="form-group">
-                    <label for="username" class="form-label">Username</label>
-                    <div class="input-wrap">
-                        <span class="input-icon" aria-hidden="true">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                        </span>
-                        <input
-                            type="text"
-                            id="username"
-                            name="username"
-                            class="form-input"
-                            placeholder="Enter your username"
-                            autocomplete="username"
-                            required
-                            value="{{ username_val or '' }}"
-                        >
+                        <!-- ─── LOGIN PANEL ─── -->
+                        <div class="auth-card" id="loginSection" style="display: block;">
+                            <!-- Logo / Icon -->
+                            <div class="card-icon" aria-hidden="true">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                    <circle cx="12" cy="11" r="2.5" fill="currentColor" stroke="none" opacity="0.6"/>
+                                    <line x1="12" y1="13.5" x2="12" y2="16"/>
+                                </svg>
+                            </div>
+
+                            <h2 class="card-title">THREAT SYSTEM</h2>
+                            <p class="card-subtitle">Sign in to access the Security Operations Console</p>
+
+                            <!-- Server Alert Messages -->
+                            {% if error %}
+                            <div class="alert alert-error" role="alert">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                                </svg>
+                                <span>{{ error }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if success %}
+                            <div class="alert alert-success" role="alert">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                <span>{{ success }}</span>
+                            </div>
+                            {% endif %}
+
+                            <!-- Login Form -->
+                            <form id="loginForm" method="POST" action="/login" novalidate>
+                                <div class="form-group">
+                                    <label for="username" class="form-label">Username</label>
+                                    <div class="input-wrap">
+                                        <span class="input-icon" aria-hidden="true">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                                <circle cx="12" cy="7" r="4"/>
+                                            </svg>
+                                        </span>
+                                        <input
+                                            type="text"
+                                            id="username"
+                                            name="username"
+                                            class="form-input"
+                                            placeholder="Enter analyst username"
+                                            autocomplete="username"
+                                            required
+                                            value="{{ username_val or '' }}"
+                                        >
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="password" class="form-label">Password</label>
+                                    <div class="input-wrap">
+                                        <span class="input-icon" aria-hidden="true">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                            </svg>
+                                        </span>
+                                        <input
+                                            type="password"
+                                            id="password"
+                                            name="password"
+                                            class="form-input"
+                                            placeholder="Enter password"
+                                            autocomplete="current-password"
+                                            required
+                                        >
+                                        <button type="button" class="toggle-password" id="togglePasswordBtn" aria-label="Toggle password visibility">
+                                            <svg class="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                                <circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="form-meta">
+                                    <label class="remember-label" for="rememberCheck">
+                                        <input type="checkbox" id="rememberCheck" name="remember" class="remember-check">
+                                        Remember session
+                                    </label>
+                                    <button type="button" class="forgot-link-btn" id="openForgotBtn">Forgot password?</button>
+                                </div>
+
+                                <button type="submit" class="btn-primary-action" id="signInBtn">
+                                    <span class="btn-text">Sign In</span>
+                                    <span class="btn-spinner" id="loginSpinner" aria-hidden="true"></span>
+                                </button>
+                            </form>
+
+                            <div class="divider"><span>system info</span></div>
+
+                            <div class="system-info">
+                                <span class="info-badge">
+                                    <span class="status-dot"></span>
+                                    System Online
+                                </span>
+                                <span>Rule Engine v1.0</span>
+                                <span>SQLite Local</span>
+                            </div>
+                        </div>
+
+                        <!-- ─── FORGOT / CHANGE PASSWORD PANEL ─── -->
+                        <div class="auth-card" id="forgotSection" style="display: none;">
+                            <div class="card-icon" style="background: rgba(251, 191, 36, 0.12); border-color: rgba(251, 191, 36, 0.4); color: var(--warning);" aria-hidden="true">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="7.5" cy="15.5" r="5.5"/>
+                                    <path d="M21 2l-9.6 9.6"/>
+                                    <path d="M15.5 7.5l3 3L22 7l-3-3"/>
+                                </svg>
+                            </div>
+
+                            <h2 class="card-title">RESET PASSWORD</h2>
+                            <p class="card-subtitle">Verify your account credentials to set a new password</p>
+
+                            <!-- Client-side Feedback Alert -->
+                            <div id="resetFeedback" class="alert" style="display: none;"></div>
+
+                            <!-- Forgot Password Form -->
+                            <form id="forgotPasswordForm" novalidate>
+                                <div class="form-group">
+                                    <label for="resetIdentity" class="form-label">Username or Email</label>
+                                    <div class="input-wrap">
+                                        <span class="input-icon" aria-hidden="true">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                                <circle cx="12" cy="7" r="4"/>
+                                            </svg>
+                                        </span>
+                                        <input
+                                            type="text"
+                                            id="resetIdentity"
+                                            class="form-input"
+                                            placeholder="Enter your username or email"
+                                            required
+                                        >
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="resetNewPassword" class="form-label">New Password</label>
+                                    <div class="input-wrap">
+                                        <span class="input-icon" aria-hidden="true">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                            </svg>
+                                        </span>
+                                        <input
+                                            type="password"
+                                            id="resetNewPassword"
+                                            class="form-input"
+                                            placeholder="Enter new password (min. 4 chars)"
+                                            required
+                                        >
+                                        <button type="button" class="toggle-password" id="toggleResetPasswordBtn" aria-label="Toggle password visibility">
+                                            <svg class="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                                <circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="resetConfirmPassword" class="form-label">Confirm New Password</label>
+                                    <div class="input-wrap">
+                                        <span class="input-icon" aria-hidden="true">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                            </svg>
+                                        </span>
+                                        <input
+                                            type="password"
+                                            id="resetConfirmPassword"
+                                            class="form-input"
+                                            placeholder="Re-enter new password"
+                                            required
+                                        >
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn-primary-action" id="resetSubmitBtn">
+                                    <span class="btn-text">Update Password</span>
+                                    <span class="btn-spinner" id="resetSpinner" aria-hidden="true"></span>
+                                </button>
+
+                                <button type="button" class="btn-secondary-action" id="backToLoginBtn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                                        <polyline points="12 19 5 12 12 5"></polyline>
+                                    </svg>
+                                    Back to Sign In
+                                </button>
+                            </form>
+
+                            <div class="divider"><span>security guard</span></div>
+
+                            <div class="system-info">
+                                <span class="info-badge">
+                                    <span class="status-dot"></span>
+                                    Direct Database Reset
+                                </span>
+                                <span>Immediate Sync</span>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="password" class="form-label">Password</label>
-                    <div class="input-wrap">
-                        <span class="input-icon" aria-hidden="true">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                            </svg>
-                        </span>
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            class="form-input"
-                            placeholder="Enter your password"
-                            autocomplete="current-password"
-                            required
-                        >
-                        <button type="button" class="toggle-password" id="togglePassword"
-                                aria-label="Toggle password visibility">
-                            <svg id="eyeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none"
-                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="form-meta">
-                    <label class="remember-label" for="remember">
-                        <input type="checkbox" id="remember" name="remember" class="remember-check">
-                        <span class="check-box" aria-hidden="true"></span>
-                        Remember me
-                    </label>
-                    <span class="forgot-link" title="Contact your system administrator">Forgot password?</span>
-                </div>
-
-                <button type="submit" class="btn-login" id="loginBtn">
-                    <span class="btn-text">Sign In</span>
-                    <span class="btn-spinner" id="loginSpinner" aria-hidden="true"></span>
-                </button>
-            </form>
-
-            <!-- Divider -->
-            <div class="divider"><span>system info</span></div>
-
-            <!-- System info footer inside card -->
-            <div class="system-info">
-                <span class="info-badge">
-                    <span class="status-dot" aria-hidden="true"></span>
-                    System Online
-                </span>
-                <span class="info-text">Rule-based Engine v1.0</span>
-                <span class="info-text">SQLite · Local</span>
             </div>
+        </div>
 
-        </div><!-- /.login-card -->
-
-        <p class="page-footer">
-            Insider Threat Detection System &nbsp;·&nbsp; Internal Use Only
+        <p class="page-subfooter">
+            Insider Threat Detection System &nbsp;·&nbsp; Enterprise Security Sentinel &nbsp;·&nbsp; Authorized Personnel Only
         </p>
     </div>
 
+    <!-- Script for Particle Drift, Light/Dark Mode, and Forgot Password -->
     <script>
-        // Toggle password visibility
-        const toggleBtn = document.getElementById('togglePassword');
-        const passwordInput = document.getElementById('password');
-        const eyeIcon = document.getElementById('eyeIcon');
+        // ─── Theme Management ───
+        const themeBtn = document.getElementById('themeToggleBtn');
+        const themeIcon = document.getElementById('themeToggleIcon');
+        const themeText = document.getElementById('themeToggleText');
 
-        toggleBtn.addEventListener('click', () => {
-            const isHidden = passwordInput.type === 'password';
-            passwordInput.type = isHidden ? 'text' : 'password';
-            eyeIcon.innerHTML = isHidden
-                ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                   <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                   <line x1="1" y1="1" x2="23" y2="23"/>`
-                : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                   <circle cx="12" cy="12" r="3"/>`;
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            document.body.className = theme === 'light' ? 'light-mode' : '';
+            localStorage.setItem('threat_theme', theme);
+
+            if (theme === 'light') {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Dark Mode';
+            } else {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Light Mode';
+            }
+        }
+
+        const savedTheme = localStorage.getItem('threat_theme') || 
+            (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        applyTheme(savedTheme);
+
+        themeBtn.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            const next = current === 'light' ? 'dark' : 'light';
+            applyTheme(next);
         });
 
-        // Show spinner on submit
-        const form = document.getElementById('loginForm');
-        const loginBtn = document.getElementById('loginBtn');
-        const spinner = document.getElementById('loginSpinner');
+        // ─── View Toggle (Sign In vs Forgot Password) ───
+        const loginSection = document.getElementById('loginSection');
+        const forgotSection = document.getElementById('forgotSection');
+        const openForgotBtn = document.getElementById('openForgotBtn');
+        const backToLoginBtn = document.getElementById('backToLoginBtn');
 
-        form.addEventListener('submit', (e) => {
-            const user = document.getElementById('username').value.trim();
-            const pass = document.getElementById('password').value.trim();
-            if (!user || !pass) { e.preventDefault(); return; }
-            loginBtn.disabled = true;
-            spinner.style.display = 'inline-block';
+        openForgotBtn.addEventListener('click', () => {
+            loginSection.style.display = 'none';
+            forgotSection.style.display = 'block';
+            document.getElementById('resetIdentity').focus();
         });
+
+        backToLoginBtn.addEventListener('click', () => {
+            forgotSection.style.display = 'none';
+            loginSection.style.display = 'block';
+            document.getElementById('username').focus();
+        });
+
+        // ─── Password Visibility Toggles ───
+        function setupPasswordToggle(btnId, inputId) {
+            const btn = document.getElementById(btnId);
+            const input = document.getElementById(inputId);
+            if (!btn || !input) return;
+            btn.addEventListener('click', () => {
+                const isPass = input.type === 'password';
+                input.type = isPass ? 'text' : 'password';
+                btn.innerHTML = isPass
+                    ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+                    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+            });
+        }
+        setupPasswordToggle('togglePasswordBtn', 'password');
+        setupPasswordToggle('toggleResetPasswordBtn', 'resetNewPassword');
+
+        // ─── Sign In Submit Spinner ───
+        document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            if (!u || !p) { e.preventDefault(); return; }
+            document.getElementById('signInBtn').disabled = true;
+            document.getElementById('loginSpinner').style.display = 'inline-block';
+        });
+
+        // ─── Forgot Password AJAX Handler ───
+        const forgotForm = document.getElementById('forgotPasswordForm');
+        const resetFeedback = document.getElementById('resetFeedback');
+        const resetSubmitBtn = document.getElementById('resetSubmitBtn');
+        const resetSpinner = document.getElementById('resetSpinner');
+
+        forgotForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const identity = document.getElementById('resetIdentity').value.trim();
+            const newPassword = document.getElementById('resetNewPassword').value.trim();
+            const confirmPassword = document.getElementById('resetConfirmPassword').value.trim();
+
+            if (!identity || !newPassword) {
+                showResetAlert('error', 'Please enter your username/email and a new password.');
+                return;
+            }
+
+            if (newPassword.length < 4) {
+                showResetAlert('error', 'Password must be at least 4 characters long.');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showResetAlert('error', 'Passwords do not match.');
+                return;
+            }
+
+            resetSubmitBtn.disabled = true;
+            resetSpinner.style.display = 'inline-block';
+
+            try {
+                const res = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        identity,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    showResetAlert('success', (data.message || 'Password successfully updated!') + ' You can now sign in.');
+                    document.getElementById('username').value = identity;
+                    setTimeout(() => {
+                        forgotSection.style.display = 'none';
+                        loginSection.style.display = 'block';
+                        document.getElementById('password').focus();
+                    }, 1800);
+                } else {
+                    showResetAlert('error', data.error || 'Failed to reset password. Please check your credentials.');
+                }
+            } catch (err) {
+                showResetAlert('error', 'Network error occurred. Please try again.');
+            } finally {
+                resetSubmitBtn.disabled = false;
+                resetSpinner.style.display = 'none';
+            }
+        });
+
+        function showResetAlert(type, message) {
+            resetFeedback.className = `alert alert-${type}`;
+            resetFeedback.style.display = 'flex';
+            resetFeedback.innerHTML = `
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    ${type === 'success' 
+                        ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>'
+                        : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+                </svg>
+                <span>${message}</span>
+            `;
+        }
+
+        // ─── Particle Drift Interactive ASCII Canvas Implementation ───
+        (function initParticleDrift() {
+            const canvas = document.getElementById('particle-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            let width, height;
+            let nodes = [];
+            let beams = [];
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*()'.split('');
+            let mouse = { x: -1000, y: -1000 };
+
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+                ctx.scale(dpr, dpr);
+            }
+
+            window.addEventListener('resize', () => {
+                resize();
+                createParticles();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+
+            function createParticles() {
+                nodes = Array.from({ length: Math.max(40, Math.floor(width / 16)) }).map(() => ({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vy: Math.random() * 0.4 + 0.1,
+                    char: chars[Math.floor(Math.random() * chars.length)]
+                }));
+
+                beams = Array.from({ length: 22 }).map(() => ({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    length: Math.random() * 110 + 50,
+                    speed: Math.random() * 5 + 3,
+                    opacity: Math.random() * 0.4 + 0.25
+                }));
+            }
+
+            resize();
+            createParticles();
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+
+                const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                const beamColor = isLight ? '37, 99, 235' : '96, 165, 250';
+                const nodeFillHover = isLight ? '#2563EB' : '#60A5FA';
+                const nodeFillNormal = isLight ? 'rgba(36, 48, 68, 0.45)' : 'rgba(156, 163, 175, 0.35)';
+                const linkColor = isLight ? 'rgba(37, 99, 235,' : 'rgba(96, 165, 250,';
+
+                // 1. Upward Glowing Beams
+                beams.forEach(b => {
+                    b.y -= b.speed;
+                    if (b.y + b.length < 0) {
+                        b.y = height + 100;
+                        b.x = Math.random() * width;
+                    }
+                    const g = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.length);
+                    g.addColorStop(0, `rgba(${beamColor}, ${b.opacity})`);
+                    g.addColorStop(1, 'transparent');
+                    ctx.strokeStyle = g;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(b.x, b.y);
+                    ctx.lineTo(b.x, b.y + b.length);
+                    ctx.stroke();
+                });
+
+                // 2. Interactive Nodes & Proximity Mesh
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Node interconnects
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i < nodes.length; i++) {
+                    const n1 = nodes[i];
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const n2 = nodes[j];
+                        const d = Math.hypot(n1.x - n2.x, n1.y - n2.y);
+                        if (d < 110) {
+                            ctx.strokeStyle = isLight
+                                ? `rgba(37, 99, 235, ${0.15 * (1 - d / 110)})`
+                                : `rgba(156, 163, 175, ${0.12 * (1 - d / 110)})`;
+                            ctx.beginPath();
+                            ctx.moveTo(n1.x, n1.y);
+                            ctx.lineTo(n2.x, n2.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                // Render ASCII Characters
+                nodes.forEach(n => {
+                    n.y += n.vy;
+                    if (n.y > height + 20) {
+                        n.y = -20;
+                        n.x = Math.random() * width;
+                    }
+
+                    const dist = Math.hypot(mouse.x - n.x, mouse.y - n.y);
+
+                    // Dynamic char swap
+                    if (dist < 180 || Math.random() > 0.985) {
+                        n.char = chars[Math.floor(Math.random() * chars.length)];
+                    }
+
+                    // Mouse pointer interactive beam
+                    if (dist < 180) {
+                        ctx.strokeStyle = `${linkColor} ${0.45 * (1 - dist / 180)})`;
+                        ctx.beginPath();
+                        ctx.moveTo(n.x, n.y);
+                        ctx.lineTo(mouse.x, mouse.y);
+                        ctx.stroke();
+                    }
+
+                    ctx.fillStyle = dist < 180 ? nodeFillHover : nodeFillNormal;
+                    ctx.fillText(n.char, n.x, n.y);
+                });
+
+                requestAnimationFrame(draw);
+            }
+
+            draw();
+        })();
     </script>
 </body>
 </html>

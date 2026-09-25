@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from backend.routes.api import api_bp
-from backend.services.data_service import verify_login
+from backend.services.data_service import verify_login, reset_password
 from database.init_db import init_database
 
 app = Flask(__name__)
@@ -24,6 +24,7 @@ app.register_blueprint(api_bp, url_prefix='/api')
 def login():
     """Login page."""
     error = None
+    success = None
     username_val = ''
     if request.method == 'POST':
         username_val = request.form.get('username', '').strip()
@@ -40,7 +41,30 @@ def login():
                 return redirect(url_for('member_dashboard'))
         else:
             error = 'Invalid username or password. Please try again.'
-    return render_template('login.html', error=error, username_val=username_val)
+    return render_template('login.html', error=error, success=success, username_val=username_val)
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password_page():
+    """Forgot / Change Password endpoint."""
+    error = None
+    success = None
+    if request.method == 'POST':
+        identity = request.form.get('identity', '').strip()
+        new_password = request.form.get('new_password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+
+        if not identity or not new_password:
+            error = 'Please provide your username/email and a new password.'
+        elif new_password != confirm_password:
+            error = 'Passwords do not match.'
+        else:
+            ok, msg = reset_password(identity, new_password)
+            if ok:
+                success = msg + ' You can now sign in with your new password.'
+            else:
+                error = msg
+    return render_template('login.html', error=error, success=success, forgot_mode=True)
 
 
 @app.route('/logout')

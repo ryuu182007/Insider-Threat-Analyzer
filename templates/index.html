@@ -65,6 +65,10 @@
                     </div>
                 </div>
                 <div class="header-right">
+                    <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+                        <i data-lucide="sun" class="sun-icon"></i>
+                        <i data-lucide="moon" class="moon-icon"></i>
+                    </button>
                     <div class="status-indicator">
                         <span class="status-dot"></span>
                         <span id="system-status">Operational</span>
@@ -85,6 +89,22 @@
 
             <!-- Dashboard -->
             <section id="page-dashboard" class="page active">
+                <!-- Command Center Tracker Bar -->
+                <div class="tracker-status-bar" id="command-center-tracker-bar">
+                    <div class="tracker-status-info">
+                        <span class="tracker-pulsing-dot"></span>
+                        <span class="tracker-title">COMMAND CENTER TRACKER</span>
+                        <span class="tracker-state-badge on" id="tracker-state-badge">TRACKER ACTIVE (ON)</span>
+                        <span class="tracker-sub">Daily Anomaly &amp; Subject Monitoring Stream</span>
+                    </div>
+                    <div class="tracker-toggle-wrap">
+                        <button id="global-tracker-toggle" class="btn-tracker-toggle" title="Toggle Tracker Mode">
+                            <span class="toggle-indicator on" id="tracker-toggle-indicator"></span>
+                            <span id="tracker-toggle-text">TRACKER: ON</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="summary-cards">
                     <div class="card stat-card">
                         <div class="stat-icon-wrap"><i data-lucide="users"></i></div>
@@ -206,18 +226,64 @@
                 </div>
             </section>
 
-            <!-- Users -->
+            <!-- Users (Subjects) -->
             <section id="page-users" class="page">
+                <!-- Daily Subject Threat Tracker -->
+                <div class="panel tracker-panel" id="subject-tracker-panel">
+                    <div class="tracker-header">
+                        <div class="tracker-title-group">
+                            <span class="tracker-pulsing-dot"></span>
+                            <h3 class="panel-title" style="margin-bottom:0">Daily Subject Threat Tracker</h3>
+                            <span class="tracker-daily-tag">DAILY BASIS</span>
+                        </div>
+                        <div class="tracker-meta-info" id="tracker-dept-indicator">Department: All</div>
+                    </div>
+                    <div class="tracker-kpi-grid">
+                        <div class="tracker-kpi-card">
+                            <span class="kpi-label">Monitored Subjects</span>
+                            <span class="kpi-value" id="tracker-monitored-count">--</span>
+                            <span class="kpi-sub">Active profiles</span>
+                        </div>
+                        <div class="tracker-kpi-card">
+                            <span class="kpi-label">Avg Daily Risk</span>
+                            <span class="kpi-value" id="tracker-avg-risk">--</span>
+                            <span class="kpi-sub">Normalized baseline</span>
+                        </div>
+                        <div class="tracker-kpi-card">
+                            <span class="kpi-label">High-Risk Flagged</span>
+                            <span class="kpi-value danger" id="tracker-high-risk">--</span>
+                            <span class="kpi-sub">Priority attention</span>
+                        </div>
+                        <div class="tracker-kpi-card">
+                            <span class="kpi-label">Daily Anomalous Events</span>
+                            <span class="kpi-value warning" id="tracker-daily-anomalies">--</span>
+                            <span class="kpi-sub">Logged today</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="page-header">
                     <h2>Subject Monitoring</h2>
                     <div class="filters">
                         <input type="text" id="user-search" placeholder="Search users…" class="filter-input">
+                        <!-- Department tab beside all risk level -->
+                        <select id="user-department-filter" class="filter-select" title="Filter by Department">
+                            <option value="">All Departments</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Human Resources">Human Resources</option>
+                            <option value="Sales">Sales</option>
+                            <option value="IT / DevOps">IT / DevOps</option>
+                            <option value="Executive">Executive</option>
+                            <option value="Marketing">Marketing</option>
+                        </select>
                         <select id="user-risk-filter" class="filter-select">
                             <option value="">All Risk Levels</option>
                             <option value="low">Low (0-29)</option>
                             <option value="medium">Medium (30-59)</option>
                             <option value="high">High (60-79)</option>
                             <option value="critical">Critical (80+)</option>
+                            <option value="intra_trader">Intra-Trader / High Activity</option>
                         </select>
                         <button id="add-member-btn" class="btn-primary" style="margin-left: 10px;">
                             <i data-lucide="user-plus"></i> Add Member
@@ -233,12 +299,13 @@
                                     <th>Department</th>
                                     <th>Role</th>
                                     <th>Risk Score</th>
+                                    <th>Daily Track</th>
                                     <th>Status</th>
                                     <th>Last Activity</th>
                                 </tr>
                             </thead>
                             <tbody id="users-body">
-                                <tr><td colspan="6" class="loading-cell">Loading…</td></tr>
+                                <tr><td colspan="7" class="loading-cell">Loading…</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -308,6 +375,9 @@
                             <option value="Investigating">Investigating</option>
                             <option value="Resolved">Resolved</option>
                         </select>
+                        <button id="add-member-incident-btn" class="btn-primary" style="margin-left: 10px;">
+                            <i data-lucide="user-plus"></i> Add Member
+                        </button>
                     </div>
                 </div>
                 <div class="panel">

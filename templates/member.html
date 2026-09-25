@@ -45,6 +45,10 @@
                 <div class="header-center">
                 </div>
                 <div class="header-right">
+                    <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+                        <i data-lucide="sun" class="sun-icon"></i>
+                        <i data-lucide="moon" class="moon-icon"></i>
+                    </button>
                     <div class="status-indicator">
                         <span class="status-dot"></span>
                         <span id="system-status">Portal Active</span>
@@ -139,7 +143,26 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', loadTasks);
+        function initTheme() {
+            const savedTheme = localStorage.getItem('threat_theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.body.className = savedTheme === 'light' ? 'light-mode' : '';
+
+            document.getElementById('theme-toggle')?.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') || 'dark';
+                const next = current === 'light' ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', next);
+                document.body.className = next === 'light' ? 'light-mode' : '';
+                localStorage.setItem('threat_theme', next);
+                lucide.createIcons();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            loadTasks();
+            lucide.createIcons();
+        });
     </script>
 </body>
 </html>
