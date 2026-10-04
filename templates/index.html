@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Insider Threat Monitor</title>
+    <title>ThreatSim — Insider Threat Simulation & Security Console</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Orbitron:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -14,181 +14,160 @@
 
 <body>
     <div class="app-layout">
-        <!-- Sidebar -->
-        <nav class="sidebar">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="main-sidebar">
             <div class="sidebar-header">
                 <div class="logo-icon">
-                    <i data-lucide="shield"></i>
+                    <i data-lucide="shield-alert"></i>
                 </div>
                 <div>
-                    <span class="logo-text">THREAT SYSTEM</span>
-                    <span class="logo-sub">Security Console</span>
+                    <span class="logo-text">THREATSIM</span>
+                    <span class="logo-sub">Insider Threat Platform</span>
                 </div>
             </div>
+            
             <ul class="nav-list">
-                <li><a href="#" class="nav-link active" data-page="dashboard">
-                        <i data-lucide="layout-dashboard"></i> Command Center
-                    </a></li>
-                <li><a href="#" class="nav-link" data-page="users">
-                        <i data-lucide="users"></i> Subjects
-                    </a></li>
-                <li><a href="#" class="nav-link" data-page="activity">
-                        <i data-lucide="scroll-text"></i> Activity Logs
-                    </a></li>
-                <li><a href="#" class="nav-link" data-page="incidents">
-                        <i data-lucide="shield-alert"></i> Incidents
-                    </a></li>
-                <li><a href="#" class="nav-link" data-page="threats">
-                        <i data-lucide="radar"></i> Threat Radar
-                    </a></li>
-                <li><a href="#" class="nav-link" data-page="tasks">
-                        <i data-lucide="check-square"></i> Tasks
-                    </a></li>
-                <li><a href="#" class="nav-link" data-page="settings">
-                        <i data-lucide="settings-2"></i> System Config
-                    </a></li>
+                <li>
+                    <a href="#" class="nav-link active" data-page="dashboard">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-page="employees">
+                        <i data-lucide="users"></i>
+                        <span>Employees</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-page="simulator">
+                        <i data-lucide="crosshair"></i>
+                        <span>Threat Simulator</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-page="alerts">
+                        <i data-lucide="bell"></i>
+                        <span>Alerts &amp; Activity</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-page="reports">
+                        <i data-lucide="bar-chart-3"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i data-lucide="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
             </ul>
-            <div class="sidebar-footer">Engine v1.0.0</div>
+
+            <div class="sidebar-footer">
+                <span>ThreatSim SOC v2.0</span>
+                <span class="status-indicator">
+                    <span class="status-dot"></span> Online
+                </span>
+            </div>
         </nav>
 
-        <!-- Main Content -->
+        <!-- Main Content Area -->
         <main class="main-content">
+            <!-- Top Header -->
             <header class="top-header">
-                <div class="header-left">
-                    <h1>INSIDER THREAT SYSTEM</h1>
-                    <p class="subtitle">Security Operations Dashboard</p>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="mobile-nav-toggle" id="mobile-toggle" aria-label="Toggle menu">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <div class="header-left">
+                        <h1>THREATSIM SECURITY OPERATIONS</h1>
+                        <p class="subtitle">Insider Risk Analysis &amp; Attack Simulation Console</p>
+                    </div>
                 </div>
+
                 <div class="header-center">
                     <div class="search-pill">
                         <i data-lucide="search"></i>
-                        <input type="text" id="global-search" placeholder="Search users, IPs, incidents…">
+                        <input type="text" id="global-search" placeholder="Search employees, alerts, activities…">
                     </div>
                 </div>
+
                 <div class="header-right">
                     <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
-                        <i data-lucide="sun" class="sun-icon"></i>
-                        <i data-lucide="moon" class="moon-icon"></i>
+                        <i data-lucide="moon"></i>
                     </button>
                     <div class="status-indicator">
                         <span class="status-dot"></span>
                         <span id="system-status">Operational</span>
                     </div>
-                    <span class="last-updated" id="last-updated">--</span>
                     <div class="analyst-chip">
-                        <div class="analyst-avatar" id="analyst-initials">SA</div>
+                        <div class="analyst-avatar" id="analyst-initials">AR</div>
                         <div class="analyst-profile">
-                            <span class="analyst-name" id="analyst-name">{{ session.get('analyst', 'Analyst') | upper }}</span>
-                            <span class="analyst-role">Security Analyst</span>
+                            <span class="analyst-name" id="analyst-name">{{ session.get('full_name') or session.get('analyst', 'Admin') }}</span>
+                            <span class="analyst-role">Security Administrator</span>
                         </div>
                     </div>
                     <a href="/logout" class="logout-btn" title="Sign out">
-                        <i data-lucide="log-out"></i> Logout
+                        <i data-lucide="log-out"></i>
+                        <span>Sign Out</span>
                     </a>
                 </div>
             </header>
 
-            <!-- Dashboard -->
+            <!-- ========================================================
+                 PAGE 1: DASHBOARD
+                 ======================================================== -->
             <section id="page-dashboard" class="page active">
-                <!-- Command Center Tracker Bar -->
-                <div class="tracker-status-bar" id="command-center-tracker-bar">
-                    <div class="tracker-status-info">
-                        <span class="tracker-pulsing-dot"></span>
-                        <span class="tracker-title">COMMAND CENTER TRACKER</span>
-                        <span class="tracker-state-badge on" id="tracker-state-badge">TRACKER ACTIVE (ON)</span>
-                        <span class="tracker-sub">Daily Anomaly &amp; Subject Monitoring Stream</span>
+                <div class="page-header">
+                    <div>
+                        <h2>Security Operations Dashboard</h2>
+                        <p>Real-time insider threat telemetry, risk posture, and activity stream</p>
                     </div>
-                    <div class="tracker-toggle-wrap">
-                        <button id="global-tracker-toggle" class="btn-tracker-toggle" title="Toggle Tracker Mode">
-                            <span class="toggle-indicator on" id="tracker-toggle-indicator"></span>
-                            <span id="tracker-toggle-text">TRACKER: ON</span>
-                        </button>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);" id="dashboard-timestamp">
+                        Synchronized
                     </div>
                 </div>
 
+                <!-- 4 Top KPI Cards (Required: Total Employees, Active Alerts, High Risk Employees, Total Simulations) -->
                 <div class="summary-cards">
-                    <div class="card stat-card">
+                    <div class="stat-card">
                         <div class="stat-icon-wrap"><i data-lucide="users"></i></div>
                         <div class="stat-body">
-                            <span class="stat-label">Total Users</span>
-                            <span class="stat-value" id="stat-total-users">--</span>
+                            <span class="stat-label">Total Employees</span>
+                            <span class="stat-value" id="stat-total-employees">--</span>
                         </div>
                     </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon-wrap"><i data-lucide="user-check"></i></div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="color: var(--cherry-hover);"><i data-lucide="alert-triangle"></i></div>
                         <div class="stat-body">
-                            <span class="stat-label">Active Users</span>
-                            <span class="stat-value" id="stat-active-users">--</span>
+                            <span class="stat-label">Active Alerts</span>
+                            <span class="stat-value danger" id="stat-active-alerts">--</span>
                         </div>
                     </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon-wrap"><i data-lucide="eye"></i></div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="color: var(--risk-high);"><i data-lucide="user-x"></i></div>
                         <div class="stat-body">
-                            <span class="stat-label">Suspicious</span>
-                            <span class="stat-value warning" id="stat-suspicious">--</span>
+                            <span class="stat-label">High Risk Employees</span>
+                            <span class="stat-value warning" id="stat-high-risk-employees">--</span>
                         </div>
                     </div>
-                    <div class="card stat-card">
-                        <div class="stat-icon-wrap"><i data-lucide="alert-triangle"></i></div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="color: var(--cherry-accent);"><i data-lucide="crosshair"></i></div>
                         <div class="stat-body">
-                            <span class="stat-label">Open Incidents</span>
-                            <span class="stat-value danger" id="stat-incidents">--</span>
+                            <span class="stat-label">Total Simulations</span>
+                            <span class="stat-value" id="stat-total-simulations">--</span>
                         </div>
                     </div>
                 </div>
 
+                <!-- Dashboard Grid -->
                 <div class="dashboard-main-grid">
-                    <!-- Security Posture -->
-                    <div class="panel posture-panel">
-                        <h2 class="panel-title">Security Posture</h2>
-                        <div class="posture-header">
-                            <div class="posture-avatar">
-                                <i data-lucide="shield-check"></i>
-                            </div>
-                            <div class="posture-info">
-                                <h3>Organization Monitor</h3>
-                                <div class="posture-stat-row">
-                                    <i data-lucide="building-2"></i>
-                                    <span>All Departments</span>
-                                </div>
-                                <div class="posture-stat-row">
-                                    <i data-lucide="activity"></i>
-                                    <span>Rule-Based Engine Active</span>
-                                </div>
-                                <div class="posture-stat-row">
-                                    <i data-lucide="clock"></i>
-                                    <span id="posture-time">Real-time monitoring</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="xp-bar-wrap">
-                            <div class="xp-bar-label">
-                                <span>Global Risk Score</span>
-                                <strong id="posture-risk-score">-- / 100</strong>
-                            </div>
-                            <div class="xp-bar">
-                                <div class="xp-bar-fill" id="posture-risk-bar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 7-Day Anomaly Track -->
-                    <div class="panel chart-mini-panel">
-                        <h2 class="panel-title">7-Day Anomaly Track</h2>
-                        <canvas id="chart-dashboard-anomaly"></canvas>
-                    </div>
-
-                    <!-- Threat Vectors -->
-                    <div class="panel">
-                        <h2 class="panel-title">Threat Vectors</h2>
-                        <div class="vector-list" id="threat-vectors-list">
-                            <div class="loading-cell" style="padding:1rem;text-align:center;color:var(--text-muted)">Loading vectors…</div>
-                        </div>
-                    </div>
-
-                    <!-- Threat Level Ring -->
-                    <div class="panel threat-overview">
-                        <h2 class="panel-title">Threat Level</h2>
-                        <div class="threat-content">
+                    <!-- Global Security Posture -->
+                    <div class="panel span-4">
+                        <h3 class="panel-title"><i data-lucide="shield-check"></i> Organization Security Posture</h3>
+                        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px;">
                             <div class="risk-ring-container">
                                 <svg class="risk-ring" viewBox="0 0 120 120">
                                     <circle cx="60" cy="60" r="52" class="ring-bg" />
@@ -199,636 +178,673 @@
                                     <span class="risk-sub">Threat Level</span>
                                 </div>
                             </div>
-                            <div class="threat-stats">
-                                <div class="threat-stat">
-                                    <span class="ts-label">Avg Risk Score</span>
-                                    <span class="ts-value" id="avg-risk">--</span>
+                            <div class="xp-bar-wrap">
+                                <div class="xp-bar-label">
+                                    <span>Average Insider Risk Score</span>
+                                    <strong id="posture-risk-score">-- / 100</strong>
                                 </div>
-                                <div class="threat-stat">
-                                    <span class="ts-label">High-Risk Users</span>
-                                    <span class="ts-value" id="high-risk-count">--</span>
+                                <div class="xp-bar">
+                                    <div class="xp-bar-fill" id="posture-risk-bar" style="width: 0%"></div>
                                 </div>
-                                <div class="threat-stat">
-                                    <span class="ts-label">Critical Incidents</span>
-                                    <span class="ts-value danger" id="critical-count">--</span>
-                                </div>
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted); display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid var(--border-color);">
+                                <span>Detection Engine: <strong>Active</strong></span>
+                                <span>Policy Mode: <strong>Strict</strong></span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Recent Alerts Feed -->
-                    <div class="panel span-full">
-                        <h2 class="panel-title">Recent Alerts</h2>
-                        <div class="activity-feed" id="activity-feed-list">
-                            <div class="loading-cell" style="padding:1rem;text-align:center;color:var(--text-muted)">Loading alerts…</div>
+                    <!-- Risk Distribution (Absorbed Threat Radar Feature) -->
+                    <div class="panel span-4">
+                        <h3 class="panel-title"><i data-lucide="pie-chart"></i> Risk Distribution</h3>
+                        <div style="height: 190px; position: relative;">
+                            <canvas id="chart-dashboard-risk-dist"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 7-Day Anomaly Track -->
+                    <div class="panel span-4">
+                        <h3 class="panel-title"><i data-lucide="trending-up"></i> 7-Day Threat Activity Trend</h3>
+                        <div style="height: 190px; position: relative;">
+                            <canvas id="chart-dashboard-anomaly"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alerts (Absorbed Incidents overview) -->
+                    <div class="panel span-6">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                            <h3 class="panel-title" style="margin-bottom:0;"><i data-lucide="alert-circle"></i> Recent Security Alerts</h3>
+                            <button class="btn btn-sm" onclick="navigateToPage('alerts')">View All</button>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Alert</th>
+                                        <th>Employee</th>
+                                        <th>Severity</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-recent-alerts">
+                                    <tr><td colspan="4" class="loading-cell">Loading alerts…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity Feed (Absorbed Activity Logs overview) -->
+                    <div class="panel span-6">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                            <h3 class="panel-title" style="margin-bottom:0;"><i data-lucide="activity"></i> Recent Activity Stream</h3>
+                            <button class="btn btn-sm" onclick="navigateToPage('alerts', 'activity-tab')">Full Log Stream</button>
+                        </div>
+                        <div class="activity-feed" id="dashboard-recent-activity">
+                            <div class="loading-cell">Loading activity stream…</div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Users (Subjects) -->
-            <section id="page-users" class="page">
-                <!-- Daily Subject Threat Tracker -->
-                <div class="panel tracker-panel" id="subject-tracker-panel">
-                    <div class="tracker-header">
-                        <div class="tracker-title-group">
-                            <span class="tracker-pulsing-dot"></span>
-                            <h3 class="panel-title" style="margin-bottom:0">Daily Subject Threat Tracker</h3>
-                            <span class="tracker-daily-tag">DAILY BASIS</span>
-                        </div>
-                        <div class="tracker-meta-info" id="tracker-dept-indicator">Department: All</div>
+            <!-- ========================================================
+                 PAGE 2: EMPLOYEES
+                 ======================================================== -->
+            <section id="page-employees" class="page">
+                <div class="page-header">
+                    <div>
+                        <h2>Employee Security Directory</h2>
+                        <p>View, search, filter, onboard, and manage employee risk profiles</p>
                     </div>
-                    <div class="tracker-kpi-grid">
-                        <div class="tracker-kpi-card">
-                            <span class="kpi-label">Monitored Subjects</span>
-                            <span class="kpi-value" id="tracker-monitored-count">--</span>
-                            <span class="kpi-sub">Active profiles</span>
-                        </div>
-                        <div class="tracker-kpi-card">
-                            <span class="kpi-label">Avg Daily Risk</span>
-                            <span class="kpi-value" id="tracker-avg-risk">--</span>
-                            <span class="kpi-sub">Normalized baseline</span>
-                        </div>
-                        <div class="tracker-kpi-card">
-                            <span class="kpi-label">High-Risk Flagged</span>
-                            <span class="kpi-value danger" id="tracker-high-risk">--</span>
-                            <span class="kpi-sub">Priority attention</span>
-                        </div>
-                        <div class="tracker-kpi-card">
-                            <span class="kpi-label">Daily Anomalous Events</span>
-                            <span class="kpi-value warning" id="tracker-daily-anomalies">--</span>
-                            <span class="kpi-sub">Logged today</span>
-                        </div>
+                    <button class="btn btn-primary" id="open-add-employee-btn">
+                        <i data-lucide="user-plus"></i>
+                        <span>Add Employee</span>
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="panel" style="padding: 14px 18px;">
+                    <div class="filters">
+                        <input type="text" id="employee-search" placeholder="Search by name, ID, username, role…" class="filter-input" style="min-width: 240px;">
+                        
+                        <select id="employee-department-filter" class="filter-select">
+                            <option value="">All Departments</option>
+                        </select>
+
+                        <select id="employee-risk-filter" class="filter-select">
+                            <option value="">All Risk Levels</option>
+                            <option value="low">Low (0 - 29)</option>
+                            <option value="medium">Medium (30 - 59)</option>
+                            <option value="high">High (60 - 79)</option>
+                            <option value="critical">Critical (80+)</option>
+                        </select>
+
+                        <select id="employee-status-filter" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="disabled">Disabled</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="page-header">
-                    <h2>Subject Monitoring</h2>
-                    <div class="filters">
-                        <input type="text" id="user-search" placeholder="Search users…" class="filter-input">
-                        <!-- Department tab beside all risk level -->
-                        <select id="user-department-filter" class="filter-select" title="Filter by Department">
-                            <option value="">All Departments</option>
-                            <option value="Engineering">Engineering</option>
-                            <option value="Finance">Finance</option>
-                            <option value="Human Resources">Human Resources</option>
-                            <option value="Sales">Sales</option>
-                            <option value="IT / DevOps">IT / DevOps</option>
-                            <option value="Executive">Executive</option>
-                            <option value="Marketing">Marketing</option>
-                        </select>
-                        <select id="user-risk-filter" class="filter-select">
-                            <option value="">All Risk Levels</option>
-                            <option value="low">Low (0-29)</option>
-                            <option value="medium">Medium (30-59)</option>
-                            <option value="high">High (60-79)</option>
-                            <option value="critical">Critical (80+)</option>
-                            <option value="intra_trader">Intra-Trader / High Activity</option>
-                        </select>
-                        <button id="add-member-btn" class="btn-primary" style="margin-left: 10px;">
-                            <i data-lucide="user-plus"></i> Add Member
-                        </button>
-                    </div>
-                </div>
+                <!-- Employees Table -->
                 <div class="panel">
                     <div class="table-wrap">
-                        <table class="data-table" id="users-table">
+                        <table class="data-table" id="employees-table">
                             <thead>
                                 <tr>
-                                    <th>Username</th>
+                                    <th>Employee</th>
+                                    <th>ID</th>
                                     <th>Department</th>
                                     <th>Role</th>
+                                    <th>Status</th>
                                     <th>Risk Score</th>
-                                    <th>Daily Track</th>
-                                    <th>Status</th>
-                                    <th>Last Activity</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-body">
-                                <tr><td colspan="7" class="loading-cell">Loading…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal" id="user-modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3 id="modal-user-name">User Details</h3>
-                            <button class="modal-close" id="close-user-modal">&times;</button>
-                        </div>
-                        <div class="modal-body" id="user-modal-body"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Activity Logs -->
-            <section id="page-activity" class="page">
-                <div class="page-header">
-                    <h2>Activity Logs</h2>
-                    <div class="filters">
-                        <input type="text" id="activity-search" placeholder="Search activities…" class="filter-input">
-                        <select id="activity-status-filter" class="filter-select">
-                            <option value="">All Status</option>
-                            <option value="normal">Normal</option>
-                            <option value="suspicious">Suspicious</option>
-                            <option value="critical">Critical</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="table-wrap">
-                        <table class="data-table" id="activity-table">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Activity</th>
-                                    <th>IP Address</th>
-                                    <th>Device</th>
-                                    <th>Risk</th>
-                                    <th>Timestamp</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="activity-body">
-                                <tr><td colspan="7" class="loading-cell">Loading…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Incidents -->
-            <section id="page-incidents" class="page">
-                <div class="page-header">
-                    <h2>Incident Management</h2>
-                    <div class="filters">
-                        <select id="incident-severity-filter" class="filter-select">
-                            <option value="">All Severity</option>
-                            <option value="LOW">Low</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="HIGH">High</option>
-                            <option value="CRITICAL">Critical</option>
-                        </select>
-                        <select id="incident-status-filter" class="filter-select">
-                            <option value="">All Status</option>
-                            <option value="Open">Open</option>
-                            <option value="Investigating">Investigating</option>
-                            <option value="Resolved">Resolved</option>
-                        </select>
-                        <button id="add-member-incident-btn" class="btn-primary" style="margin-left: 10px;">
-                            <i data-lucide="user-plus"></i> Add Member
-                        </button>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="table-wrap">
-                        <table class="data-table" id="incidents-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>User</th>
-                                    <th>Type</th>
-                                    <th>Severity</th>
-                                    <th>Risk</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
+                                    <th>Active Alerts</th>
+                                    <th>Simulations</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="incidents-body">
-                                <tr><td colspan="8" class="loading-cell">Loading…</td></tr>
+                            <tbody id="employees-table-body">
+                                <tr><td colspan="9" class="loading-cell">Loading employees…</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <div class="modal" id="incident-modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3 id="modal-incident-title">Incident Details</h3>
-                            <button class="modal-close" id="close-incident-modal">&times;</button>
+            </section>
+
+            <!-- ========================================================
+                 PAGE 3: THREAT SIMULATOR (MAIN FEATURE)
+                 ======================================================== -->
+            <section id="page-simulator" class="page">
+                <div class="page-header">
+                    <div>
+                        <h2>Threat Simulator</h2>
+                        <p>Execute behavior scenarios against employees to evaluate risk score and generate alerts</p>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
+                        RULE-BASED DETECTION ENGINE
+                    </div>
+                </div>
+
+                <div class="simulator-layout">
+                    <!-- Left Column: Setup & Scenarios -->
+                    <div class="panel">
+                        <h3 class="panel-title"><i data-lucide="sliders"></i> 1. Select Target Employee</h3>
+                        <div class="form-group">
+                            <label class="form-label">Employee Subject</label>
+                            <select id="sim-target-employee" class="filter-select" style="width: 100%;">
+                                <option value="">Select an employee…</option>
+                            </select>
+                            <div id="sim-employee-meta" style="margin-top: 8px; font-size: 0.78rem; color: var(--text-muted); display: none;"></div>
                         </div>
-                        <div class="modal-body" id="incident-modal-body"></div>
-                    </div>
-                </div>
-            </section>
 
-            <!-- Threat Analysis -->
-            <section id="page-threats" class="page">
-                <div class="page-header">
-                    <h2>Threat Radar</h2>
-                </div>
-                <div class="charts-grid">
-                    <div class="panel chart-panel">
-                        <h3 class="panel-title">Risk Distribution</h3>
-                        <canvas id="chart-risk-dist"></canvas>
-                    </div>
-                    <div class="panel chart-panel">
-                        <h3 class="panel-title">Incidents by Severity</h3>
-                        <canvas id="chart-incidents"></canvas>
-                    </div>
-                    <div class="panel chart-panel wide">
-                        <h3 class="panel-title">Activity by Category</h3>
-                        <canvas id="chart-activity"></canvas>
-                    </div>
-                    <div class="panel chart-panel wide">
-                        <h3 class="panel-title">Threat Activity (7 Days)</h3>
-                        <canvas id="chart-timeline"></canvas>
-                    </div>
-                </div>
-                <div class="panel" style="margin-top: 0.85rem;">
-                    <h3 class="panel-title">Top Risk Subjects</h3>
-                    <div class="table-wrap">
-                        <table class="data-table" id="top-risky-table">
-                            <thead>
-                                <tr>
-                                    <th>Username</th>
-                                    <th>Full Name</th>
-                                    <th>Department</th>
-                                    <th>Risk Score</th>
-                                </tr>
-                            </thead>
-                            <tbody id="top-risky-body">
-                                <tr><td colspan="4" class="loading-cell">Loading…</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+                        <h3 class="panel-title" style="margin-top: 22px;"><i data-lucide="flame"></i> 2. Choose Threat Scenario</h3>
+                        <div class="scenario-grid" id="sim-scenarios-grid">
+                            <!-- Scenario cards dynamically rendered -->
+                            <div class="loading-cell">Loading scenarios…</div>
+                        </div>
 
-            <!-- Tasks Monitoring -->
-            <section id="page-tasks" class="page">
-                <div class="page-header">
-                    <h2>Task Monitoring</h2>
-                    <div class="filters">
-                        <button id="assign-task-btn" class="btn-primary">
-                            <i data-lucide="plus-circle"></i> Assign Task
+                        <div style="margin-top: 20px; padding: 14px; background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="sim-auto-alert-toggle" class="checkbox-input" checked>
+                                <span>Automatically generate Security Alert &amp; record into Activity Stream</span>
+                            </label>
+                        </div>
+
+                        <button id="run-simulation-btn" class="btn btn-primary" style="width: 100%; margin-top: 18px; padding: 12px; font-size: 0.95rem;">
+                            <i data-lucide="play"></i>
+                            <span>Execute Threat Simulation</span>
                         </button>
                     </div>
-                </div>
-                <div class="panel">
-                    <div class="table-wrap">
-                        <table class="data-table" id="tasks-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Assigned To</th>
-                                    <th>Task</th>
-                                    <th>Status</th>
-                                    <th>Created At</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tasks-body">
-                                <tr><td colspan="5" class="loading-cell">Loading tasks…</td></tr>
-                            </tbody>
-                        </table>
+
+                    <!-- Right Column: Live Results -->
+                    <div class="panel simulation-results-panel" id="simulation-output-panel">
+                        <h3 class="panel-title"><i data-lucide="gauge"></i> Simulation Analysis Output</h3>
+                        
+                        <div id="simulation-empty-state" class="empty-cell" style="padding: 3rem 1rem;">
+                            <i data-lucide="shield" style="width: 48px; height: 48px; margin-bottom: 12px; color: var(--border-cherry); opacity: 0.5;"></i>
+                            <p style="font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Simulation Ready</p>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); max-width: 320px; margin: 0 auto;">Select an employee and choose one of the 7 threat scenarios on the left, then click "Execute Threat Simulation".</p>
+                        </div>
+
+                        <div id="simulation-active-results" style="display: none;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                                <div>
+                                    <h4 id="sim-result-scenario-name" style="font-size: 1.15rem; color: var(--text-primary);">Scenario Name</h4>
+                                    <span id="sim-result-vector" style="font-size: 0.78rem; color: var(--cherry-hover); font-weight: 500;">Vector</span>
+                                </div>
+                                <span id="sim-result-badge" class="risk-badge critical">CRITICAL</span>
+                            </div>
+
+                            <div class="simulation-score-gauge">
+                                <div>
+                                    <div class="simulation-score-big" id="sim-result-score">--</div>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Calculated Risk Score</span>
+                                </div>
+                                <div style="flex: 1; border-left: 1px solid var(--border-color); padding-left: 18px;">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Subject Employee:</div>
+                                    <div id="sim-result-employee-display" style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">--</div>
+                                    <div id="sim-result-status-note" style="font-size: 0.78rem; color: var(--risk-low); margin-top: 6px;">
+                                        <i data-lucide="check-circle" style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px;"></i> Security alert registered in system
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h5 style="font-size: 0.82rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Triggered Behavioral Indicators</h5>
+                                <ul class="simulation-indicators-list" id="sim-result-indicators">
+                                    <!-- Dynamic indicators -->
+                                </ul>
+                            </div>
+
+                            <div style="margin-top: 14px; padding: 12px 14px; background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                                <h5 style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Recommended Operational Action</h5>
+                                <p id="sim-result-recommendation" style="font-size: 0.84rem; color: var(--text-primary); line-height: 1.4;">--</p>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 18px;">
+                                <button class="btn btn-primary" id="sim-view-in-alerts-btn">
+                                    <i data-lucide="external-link"></i>
+                                    <span>View Alert in Alerts &amp; Activity</span>
+                                </button>
+                                <button class="btn" onclick="resetSimulator()">
+                                    <span>Run Another Simulation</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Settings -->
+            <!-- ========================================================
+                 PAGE 4: ALERTS & ACTIVITY (MERGED REPLACEMENT FOR LOGS/INCIDENTS/TASKS)
+                 ======================================================== -->
+            <section id="page-alerts" class="page">
+                <div class="page-header">
+                    <div>
+                        <h2>Alerts &amp; Activity Center</h2>
+                        <p>Centralized alert triage, incident response actions, and user activity audit stream</p>
+                    </div>
+                </div>
+
+                <!-- Sub-tabs navigation -->
+                <div class="tabs-header">
+                    <button class="tab-btn active" id="tab-alerts-btn" onclick="switchAlertSubTab('alerts')">
+                        <i data-lucide="alert-circle"></i>
+                        <span>Security Alerts</span>
+                        <span id="alerts-tab-count" style="padding: 1px 7px; border-radius: 10px; background: var(--cherry-main); color: #fff; font-size: 0.7rem;">--</span>
+                    </button>
+                    <button class="tab-btn" id="tab-activity-btn" onclick="switchAlertSubTab('activity')">
+                        <i data-lucide="activity"></i>
+                        <span>Activity Stream</span>
+                    </button>
+                </div>
+
+                <!-- SUB-TAB 1: SECURITY ALERTS -->
+                <div id="subtab-alerts" class="subtab-content">
+                    <div class="panel" style="padding: 14px 18px; margin-bottom: 16px;">
+                        <div class="filters">
+                            <input type="text" id="alerts-search" placeholder="Search alerts by title or employee…" class="filter-input" style="min-width: 240px;">
+                            
+                            <select id="alerts-severity-filter" class="filter-select">
+                                <option value="">All Severity</option>
+                                <option value="LOW">Low</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="HIGH">High</option>
+                                <option value="CRITICAL">Critical</option>
+                            </select>
+
+                            <select id="alerts-status-filter" class="filter-select">
+                                <option value="">All Statuses</option>
+                                <option value="New">New</option>
+                                <option value="Investigating">Investigating</option>
+                                <option value="Resolved">Resolved</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="table-wrap">
+                            <table class="data-table" id="alerts-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Alert Title</th>
+                                        <th>Employee</th>
+                                        <th>Threat Vector</th>
+                                        <th>Severity</th>
+                                        <th>Risk Score</th>
+                                        <th>Detected</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alerts-table-body">
+                                    <tr><td colspan="9" class="loading-cell">Loading alerts…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB-TAB 2: ACTIVITY STREAM -->
+                <div id="subtab-activity" class="subtab-content" style="display: none;">
+                    <div class="panel" style="padding: 14px 18px; margin-bottom: 16px;">
+                        <div class="filters">
+                            <input type="text" id="activity-search" placeholder="Search activities, IPs, descriptions…" class="filter-input" style="min-width: 240px;">
+                            
+                            <select id="activity-status-filter" class="filter-select">
+                                <option value="">All Status</option>
+                                <option value="normal">Normal</option>
+                                <option value="suspicious">Suspicious</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="table-wrap">
+                            <table class="data-table" id="activity-table">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Activity Type</th>
+                                        <th>Description</th>
+                                        <th>IP Address</th>
+                                        <th>Device</th>
+                                        <th>Risk Score</th>
+                                        <th>Timestamp</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activity-table-body">
+                                    <tr><td colspan="8" class="loading-cell">Loading activity stream…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================
+                 PAGE 5: REPORTS
+                 ======================================================== -->
+            <section id="page-reports" class="page">
+                <div class="page-header">
+                    <div>
+                        <h2>Threat Intelligence &amp; Analytics Reports</h2>
+                        <p>Comprehensive security summaries, behavioral simulations audit, and risk ranking</p>
+                    </div>
+                    <button class="btn btn-primary" id="generate-report-modal-btn">
+                        <i data-lucide="file-text"></i>
+                        <span>Generate Executive Report</span>
+                    </button>
+                </div>
+
+                <!-- 4 Report KPI Summary Cards -->
+                <div class="summary-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap"><i data-lucide="users"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Total Employees Monitored</span>
+                            <span class="stat-value" id="report-total-employees">--</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap"><i data-lucide="crosshair"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Total Threat Simulations</span>
+                            <span class="stat-value" id="report-total-simulations">--</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="color: var(--cherry-hover);"><i data-lucide="bell"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Total Alerts Logged</span>
+                            <span class="stat-value danger" id="report-total-alerts">--</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="color: var(--risk-crit);"><i data-lucide="shield-alert"></i></div>
+                        <div class="stat-body">
+                            <span class="stat-label">Critical Threat Events</span>
+                            <span class="stat-value danger" id="report-critical-events">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-main-grid">
+                    <!-- Most Simulated Behaviour Card -->
+                    <div class="panel span-6">
+                        <h3 class="panel-title"><i data-lucide="zap"></i> Most Simulated Behaviour</h3>
+                        <div style="padding: 16px; background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Top Scenario</span>
+                                <h4 id="report-most-sim-name" style="font-size: 1.15rem; color: var(--cherry-hover); margin-top: 2px;">--</h4>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Executions</span>
+                                <div id="report-most-sim-count" style="font-size: 1.4rem; font-weight: 700; font-family: var(--font-mono); color: var(--text-primary);">--</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 14px;">
+                            <h4 style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px;">Simulations Breakdown</h4>
+                            <div id="report-simulations-breakdown-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Risk Distribution Chart -->
+                    <div class="panel span-6">
+                        <h3 class="panel-title"><i data-lucide="pie-chart"></i> Risk Score Distribution</h3>
+                        <div style="height: 220px; position: relative;">
+                            <canvas id="chart-reports-risk-dist"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Highest-Risk Employees Table -->
+                    <div class="panel span-12">
+                        <h3 class="panel-title"><i data-lucide="user-x"></i> Highest-Risk Monitored Employees</h3>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Employee</th>
+                                        <th>Employee ID</th>
+                                        <th>Department</th>
+                                        <th>Role</th>
+                                        <th>Risk Score</th>
+                                        <th>Account Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-top-risky-body">
+                                    <tr><td colspan="7" class="loading-cell">Loading rankings…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================
+                 PAGE 6: SETTINGS
+                 ======================================================== -->
             <section id="page-settings" class="page">
                 <div class="page-header">
-                    <h2>System Configuration</h2>
+                    <div>
+                        <h2>System Configuration</h2>
+                        <p>Manage rule-based detection thresholds, SOC console properties, and database telemetry</p>
+                    </div>
                 </div>
-                <div class="settings-layout">
-                    <div class="settings-tabs">
-                        <button class="settings-tab active" data-settings-tab="account">
-                            <i data-lucide="user-cog"></i> Account
-                        </button>
-                        <button class="settings-tab" data-settings-tab="detection">
-                            <i data-lucide="scan-eye"></i> Detection Rules
-                        </button>
-                        <button class="settings-tab" data-settings-tab="alerts">
-                            <i data-lucide="bell-ring"></i> Notifications
-                        </button>
-                        <button class="settings-tab" data-settings-tab="system">
-                            <i data-lucide="server"></i> System
-                        </button>
-                        <button class="settings-tab" data-settings-tab="audit">
-                            <i data-lucide="list-tree"></i> Audit Log
-                        </button>
+
+                <div class="dashboard-main-grid">
+                    <div class="panel span-6">
+                        <h3 class="panel-title"><i data-lucide="sliders"></i> Rule-Based Detection Sensitivity</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 18px; margin-top: 14px;">
+                            <div>
+                                <label class="form-label">Failed Login Attempt Threshold</label>
+                                <input type="number" id="setting-failed-threshold" class="filter-input" value="3" min="1" max="10" style="width: 100%;">
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">Triggers alert after specified consecutive failures within 24 hours</span>
+                            </div>
+
+                            <div>
+                                <label class="form-label">After-Hours Activity Window</label>
+                                <input type="text" class="filter-input" value="22:00 - 06:00" readonly style="width: 100%;">
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">Standard non-operational shift period</span>
+                            </div>
+
+                            <div>
+                                <label class="form-label">Bulk Download Flag Limit (Files)</label>
+                                <input type="number" id="setting-download-threshold" class="filter-input" value="10" min="5" max="100" style="width: 100%;">
+                                <span style="font-size: 0.72rem; color: var(--text-muted);">Threshold for bulk data download anomaly</span>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="alert('Configuration updated and saved successfully.')" style="align-self: flex-start;">
+                                Save Threshold Settings
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="settings-content panel">
-                        <!-- Account -->
-                        <div class="settings-pane active" id="settings-account">
-                            <h3 class="panel-title">Analyst Account</h3>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="user"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Analyst Name</div>
-                                        <div class="setting-row-desc">Currently signed-in operator</div>
-                                    </div>
-                                </div>
-                                <span class="setting-row-value" id="settings-analyst-name">{{ session.get('analyst', 'Analyst') | upper }}</span>
+                    <div class="panel span-6">
+                        <h3 class="panel-title"><i data-lucide="server"></i> Database &amp; System Health</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                            <div class="detail-item">
+                                <span class="detail-label">Database Engine</span>
+                                <span class="detail-value">SQLite (Local File: database/insider_threat.db)</span>
                             </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="badge-check"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Role</div>
-                                        <div class="setting-row-desc">Access level for this session</div>
-                                    </div>
-                                </div>
-                                <span class="setting-row-value">Security Analyst</span>
+                            <div class="detail-item">
+                                <span class="detail-label">RBAC Security Mode</span>
+                                <span class="detail-value">Enforced (Werkzeug Scrypt/PBKDF2 Password Hashing)</span>
                             </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="timer"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Session Timeout</div>
-                                        <div class="setting-row-desc">Auto logout after inactivity</div>
-                                    </div>
-                                </div>
-                                <select class="filter-select" id="setting-session-timeout">
-                                    <option value="30">30 minutes</option>
-                                    <option value="60" selected>60 minutes</option>
-                                    <option value="120">2 hours</option>
-                                </select>
+                            <div class="detail-item">
+                                <span class="detail-label">Detection Paradigm</span>
+                                <span class="detail-value">Transparent Rule-Based Anomaly Scoring</span>
                             </div>
-                        </div>
-
-                        <!-- Detection Rules -->
-                        <div class="settings-pane" id="settings-detection">
-                            <h3 class="panel-title">Detection Rules &amp; Sensitivity</h3>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="key-round"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Failed Login Monitoring</div>
-                                        <div class="setting-row-desc">Detect repeated authentication failures</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked data-setting="failed_login">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="key-round"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Failed Login Threshold</div>
-                                        <div class="setting-row-desc">Attempts within 24 hours</div>
-                                    </div>
-                                </div>
-                                <div class="range-wrap">
-                                    <input type="range" class="range-input" min="1" max="10" value="3" id="setting-failed-threshold">
-                                    <span class="range-value" id="setting-failed-threshold-val">3</span>
-                                </div>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="moon"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">After-Hours Access</div>
-                                        <div class="setting-row-desc">Window: 22:00 – 06:00</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked data-setting="after_hours">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="download-cloud"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Bulk Download Detection</div>
-                                        <div class="setting-row-desc">Flag mass file downloads</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked data-setting="bulk_download">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="upload"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Data Exfiltration Rules</div>
-                                        <div class="setting-row-desc">Monitor outbound data transfers</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked data-setting="exfiltration">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="gauge"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Auto-Incident Threshold</div>
-                                        <div class="setting-row-desc">Create incident when risk ≥</div>
-                                    </div>
-                                </div>
-                                <div class="range-wrap">
-                                    <input type="range" class="range-input" min="20" max="80" value="40" id="setting-incident-threshold">
-                                    <span class="range-value" id="setting-incident-threshold-val">40</span>
-                                </div>
-                            </div>
-                            <div class="settings-actions">
-                                <button class="btn btn-primary" id="settings-save-btn">Save Configuration</button>
-                                <button class="btn" id="settings-reset-btn">Reset Defaults</button>
-                            </div>
-                        </div>
-
-                        <!-- Notifications -->
-                        <div class="settings-pane" id="settings-alerts">
-                            <h3 class="panel-title">Notifications &amp; Refresh</h3>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="refresh-cw"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Dashboard Refresh Interval</div>
-                                        <div class="setting-row-desc">Auto-refresh command center data</div>
-                                    </div>
-                                </div>
-                                <select class="filter-select" id="setting-refresh-interval">
-                                    <option value="15">15 seconds</option>
-                                    <option value="30" selected>30 seconds</option>
-                                    <option value="60">60 seconds</option>
-                                </select>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="bell"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Critical Alert Highlight</div>
-                                        <div class="setting-row-desc">Pulse animation on critical events</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked id="setting-critical-highlight">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="volume-2"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Sound on Critical</div>
-                                        <div class="setting-row-desc">Audio alert for critical incidents</div>
-                                    </div>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="setting-critical-sound">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- System -->
-                        <div class="settings-pane" id="settings-system">
-                            <h3 class="panel-title">System Health</h3>
-                            <div class="system-health">
-                                <div class="health-ring-wrap">
-                                    <svg viewBox="0 0 100 100" width="100" height="100">
-                                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(124,58,237,0.15)" stroke-width="8"/>
-                                        <circle cx="50" cy="50" r="42" fill="none" stroke="#c026d3" stroke-width="8"
-                                            stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="26.4"/>
-                                    </svg>
-                                    <div class="health-ring-label">
-                                        <span class="health-pct">98%</span>
-                                        <span class="health-sub">Health</span>
-                                    </div>
-                                </div>
-                                <div class="health-details">
-                                    <div class="health-detail-row"><span class="health-dot"></span> Database: SQLite (connected)</div>
-                                    <div class="health-detail-row"><span class="health-dot"></span> Detection Engine: Rule-based v1.0</div>
-                                    <div class="health-detail-row"><span class="health-dot"></span> Status: Operational</div>
-                                    <div class="health-detail-row"><span class="health-dot"></span> Last scan: <span id="settings-last-scan">--</span></div>
-                                </div>
-                            </div>
-                            <div class="setting-row" style="margin-top:1rem;">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="database"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Database</div>
-                                        <div class="setting-row-desc">Local SQLite storage</div>
-                                    </div>
-                                </div>
-                                <span class="setting-row-value">insider_threat.db</span>
-                            </div>
-                            <div class="setting-row">
-                                <div class="setting-row-left">
-                                    <div class="setting-row-icon"><i data-lucide="cpu"></i></div>
-                                    <div>
-                                        <div class="setting-row-label">Detection Engine</div>
-                                        <div class="setting-row-desc">Transparent rule-based analysis</div>
-                                    </div>
-                                </div>
-                                <span class="setting-row-value">v1.0</span>
-                            </div>
-                        </div>
-
-                        <!-- Audit Log -->
-                        <div class="settings-pane" id="settings-audit">
-                            <h3 class="panel-title">Administrative Audit Log</h3>
-                            <div class="activity-feed audit-feed" id="audit-log-list">
-                                <div class="feed-item">
-                                    <div class="feed-icon normal"><i data-lucide="settings"></i></div>
-                                    <div class="feed-body">
-                                        <div class="feed-title">System initialized with default detection rules</div>
-                                        <div class="feed-meta">Engine startup · Rule-based v1.0</div>
-                                    </div>
-                                    <div class="feed-right">
-                                        <div class="feed-time">On boot</div>
-                                    </div>
-                                </div>
-                                <div class="feed-item">
-                                    <div class="feed-icon normal"><i data-lucide="database"></i></div>
-                                    <div class="feed-body">
-                                        <div class="feed-title">Database loaded — 15 users, 60 activity logs</div>
-                                        <div class="feed-meta">SQLite · Sample dataset</div>
-                                    </div>
-                                    <div class="feed-right">
-                                        <div class="feed-time">On boot</div>
-                                    </div>
-                                </div>
-                                <div class="feed-item">
-                                    <div class="feed-icon suspicious"><i data-lucide="user-check"></i></div>
-                                    <div class="feed-body">
-                                        <div class="feed-title">Analyst session started</div>
-                                        <div class="feed-meta">Authentication successful</div>
-                                    </div>
-                                    <div class="feed-right">
-                                        <div class="feed-time">This session</div>
-                                    </div>
-                                </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Current Session</span>
+                                <span class="detail-value">{{ session.get('analyst') }} (Admin Privilege)</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
         </main>
-        <div class="modal" id="add-member-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add New Member</h3>
-                    <button class="modal-close" id="close-add-member-modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form id="add-member-form">
-                        <div style="margin-bottom: 15px;">
-                            <label>Username</label>
-                            <input type="text" id="member-username" class="filter-input" style="width: 100%" required>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label>Full Name</label>
-                            <input type="text" id="member-fullname" class="filter-input" style="width: 100%" required>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label>Department</label>
-                            <input type="text" id="member-department" class="filter-input" style="width: 100%" required>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label>Role</label>
-                            <input type="text" id="member-role" class="filter-input" style="width: 100%" required>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label>Email</label>
-                            <input type="email" id="member-email" class="filter-input" style="width: 100%" required>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label>Password</label>
-                            <input type="password" id="member-password" class="filter-input" style="width: 100%" required>
-                        </div>
-                        <button type="submit" class="btn-primary" style="width: 100%;">Create Member</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+    </div>
 
-        <div class="modal" id="assign-task-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Assign Task</h3>
-                    <button class="modal-close" id="close-assign-task-modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form id="assign-task-form">
-                        <div style="margin-bottom: 15px;">
-                            <label>Assignee (User ID)</label>
-                            <input type="number" id="task-user-id" class="filter-input" style="width: 100%" required>
+    <!-- ========================================================
+         MODALS
+         ======================================================== -->
+
+    <!-- Add Employee Modal -->
+    <div class="modal" id="add-employee-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Employee Account</h3>
+                <button class="modal-close" onclick="closeModal('add-employee-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-employee-form">
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" id="add-emp-fullname" class="filter-input" style="width: 100%;" placeholder="e.g. Maya Chen" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Employee ID</label>
+                            <input type="text" id="add-emp-id" class="filter-input" style="width: 100%;" placeholder="e.g. EMP-1014 (Auto if empty)">
                         </div>
-                        <div style="margin-bottom: 15px;">
-                            <label>Title</label>
-                            <input type="text" id="task-title" class="filter-input" style="width: 100%" required>
+                        <div class="form-group">
+                            <label class="form-label">Department *</label>
+                            <input type="text" id="add-emp-department" class="filter-input" style="width: 100%;" placeholder="e.g. Engineering" required>
                         </div>
-                        <div style="margin-bottom: 15px;">
-                            <label>Description</label>
-                            <textarea id="task-description" class="filter-input" style="width: 100%; height: 80px;" required></textarea>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Job Role *</label>
+                            <input type="text" id="add-emp-role" class="filter-input" style="width: 100%;" placeholder="e.g. Systems Engineer" required>
                         </div>
-                        <button type="submit" class="btn-primary" style="width: 100%;">Assign Task</button>
-                    </form>
-                </div>
+                        <div class="form-group">
+                            <label class="form-label">Account Role *</label>
+                            <select id="add-emp-account-role" class="filter-select" style="width: 100%;">
+                                <option value="EMPLOYEE" selected>EMPLOYEE (Scoped Portal)</option>
+                                <option value="ADMIN">ADMIN (Full SOC Access)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Username *</label>
+                        <input type="text" id="add-emp-username" class="filter-input" style="width: 100%;" placeholder="e.g. mchen" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Temporary Password * (Min 8 characters)</label>
+                        <input type="password" id="add-emp-password" class="filter-input" style="width: 100%;" placeholder="Enter secure password" required minlength="8" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Initial Status</label>
+                        <select id="add-emp-status" class="filter-select" style="width: 100%;">
+                            <option value="active" selected>Active</option>
+                            <option value="disabled">Disabled</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 10px;">
+                        Create Employee Account
+                    </button>
+                </form>
             </div>
         </div>
     </div>
+
+    <!-- Edit Employee Modal -->
+    <div class="modal" id="edit-employee-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Employee Details</h3>
+                <button class="modal-close" onclick="closeModal('edit-employee-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-employee-form">
+                    <input type="hidden" id="edit-emp-user-id">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="edit-emp-fullname" class="filter-input" style="width: 100%;" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Employee ID</label>
+                            <input type="text" id="edit-emp-id" class="filter-input" style="width: 100%;" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Department</label>
+                            <input type="text" id="edit-emp-department" class="filter-input" style="width: 100%;" required>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Job Role</label>
+                            <input type="text" id="edit-emp-role" class="filter-input" style="width: 100%;" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Account Status</label>
+                            <select id="edit-emp-status" class="filter-select" style="width: 100%;">
+                                <option value="active">Active</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reset Password (Optional, min 8 chars)</label>
+                        <input type="password" id="edit-emp-password" class="filter-input" style="width: 100%;" placeholder="Leave blank to keep current password" minlength="8" autocomplete="new-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                        Save Employee Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Detail Modal (Show name, ID, dept, role, username, status, risk, alerts, activity, simulations) -->
+    <div class="modal" id="employee-detail-modal">
+        <div class="modal-content wide">
+            <div class="modal-header">
+                <h3 id="modal-emp-name">Employee Security Profile</h3>
+                <button class="modal-close" onclick="closeModal('employee-detail-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="employee-detail-modal-body">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Action & Investigation Workbench Modal (Absorbs Tasks!) -->
+    <div class="modal" id="alert-detail-modal">
+        <div class="modal-content wide">
+            <div class="modal-header">
+                <h3 id="modal-alert-title">Security Alert Workbench</h3>
+                <button class="modal-close" onclick="closeModal('alert-detail-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="alert-detail-modal-body">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive Report Generation Modal -->
+    <div class="modal" id="report-preview-modal">
+        <div class="modal-content wide" style="max-width: 760px;">
+            <div class="modal-header">
+                <h3>ThreatSim Executive Insider Threat Report</h3>
+                <button class="modal-close" onclick="closeModal('report-preview-modal')">&times;</button>
+            </div>
+            <div class="modal-body" id="report-preview-modal-body">
+                <!-- Dynamically populated printable report -->
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/app.js"></script>
 </body>
 

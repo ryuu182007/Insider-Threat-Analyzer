@@ -205,3 +205,185 @@ def evaluate_activity(activity_type, user_data=None, recent_activities=None):
         }
 
     return result
+
+
+SIMULATION_SCENARIOS = {
+    'normal_behaviour': {
+        'key': 'normal_behaviour',
+        'name': 'Normal Behaviour',
+        'threat_vector': 'Baseline Operations',
+        'description': 'Standard routine operations during business hours with expected departmental resource usage.',
+        'base_score': 12,
+        'severity': 'LOW',
+        'indicators': [
+            'Authentication recorded within standard operational hours (09:00 - 18:00)',
+            'Resource queries strictly confined to assigned departmental access boundaries',
+            'Zero anomalous outbound bandwidth or unapproved device connections'
+        ],
+        'recommended_action': 'No containment required — employee operating within standard behavioral profile.',
+        'activities': [
+            {'type': 'login', 'desc': 'Standard workstation single sign-on authentication', 'risk': 0, 'status': 'normal'},
+            {'type': 'file_access', 'desc': 'Accessed shared departmental project documentation', 'risk': 5, 'status': 'normal'}
+        ]
+    },
+    'after_hours_access': {
+        'key': 'after_hours_access',
+        'name': 'After-Hours Access',
+        'threat_vector': 'Temporal Anomaly',
+        'description': 'Authentication and internal repository access detected outside standard working hours (02:30 AM).',
+        'base_score': 48,
+        'severity': 'MEDIUM',
+        'indicators': [
+            'Access recorded outside operational window (22:00 - 06:00)',
+            'Remote VPN session initiated without scheduled shift authorization',
+            'Multiple repository queries executed during off-peak period'
+        ],
+        'recommended_action': 'Review employee activity timestamps and check on-call schedule authorization.',
+        'activities': [
+            {'type': 'after_hours_login', 'desc': 'Remote login detected at 02:38 AM via corporate VPN', 'risk': 35, 'status': 'suspicious'},
+            {'type': 'file_access', 'desc': 'Queried customer records during off-shift hours', 'risk': 25, 'status': 'suspicious'}
+        ]
+    },
+    'data_exfiltration': {
+        'key': 'data_exfiltration',
+        'name': 'Data Exfiltration',
+        'threat_vector': 'Data Loss Prevention (DLP)',
+        'description': 'Mass archive staging and outbound transfer of proprietary documentation to an unapproved endpoint.',
+        'base_score': 88,
+        'severity': 'CRITICAL',
+        'indicators': [
+            'Unusually high download volume (>85 sensitive project files in 10 minutes)',
+            'Encrypted compressed archive staged in staging directory',
+            'Outbound data transfer attempt flagged by perimeter inspection'
+        ],
+        'recommended_action': 'Check accessed files, isolate host workstation, and escalate to SOC Commander.',
+        'activities': [
+            {'type': 'bulk_file_download', 'desc': 'Bulk download of 85 confidential project files in 10 minutes', 'risk': 55, 'status': 'critical'},
+            {'type': 'data_exfiltration_attempt', 'desc': 'Outbound data transfer to unapproved destination detected', 'risk': 85, 'status': 'critical'}
+        ]
+    },
+    'privilege_abuse': {
+        'key': 'privilege_abuse',
+        'name': 'Privilege Abuse',
+        'threat_vector': 'Privilege Escalation',
+        'description': 'Attempted unauthorized elevation to administrative rights and modification of security configurations.',
+        'base_score': 74,
+        'severity': 'HIGH',
+        'indicators': [
+            'Attempted sudo / administrative elevation command without authorization ticket',
+            'Direct inspection of local credential cache and IAM configuration',
+            'Cross-departmental administrative console access request'
+        ],
+        'recommended_action': 'Revoke active administrative privileges and verify authorization credentials.',
+        'activities': [
+            {'type': 'privilege_escalation', 'desc': 'Unauthorized administrative credential elevation attempt', 'risk': 65, 'status': 'critical'},
+            {'type': 'sensitive_file_access', 'desc': 'Attempted access to root IAM configuration file', 'risk': 40, 'status': 'suspicious'}
+        ]
+    },
+    'credential_misuse': {
+        'key': 'credential_misuse',
+        'name': 'Credential Misuse',
+        'threat_vector': 'Authentication Anomaly',
+        'description': 'Multiple failed login attempts followed by sudden successful authentication from an anomalous IP.',
+        'base_score': 68,
+        'severity': 'HIGH',
+        'indicators': [
+            '5 rapid failed authentication attempts recorded within 4 minutes',
+            'Subsequent login from unrecognized external IP (203.45.12.88)',
+            'Behavioral pattern indicates possible credential stuffing or unauthorized session takeover'
+        ],
+        'recommended_action': 'Force password reset, terminate active sessions, and review logon origin.',
+        'activities': [
+            {'type': 'failed_login', 'desc': 'Multiple consecutive failed authentication attempts', 'risk': 35, 'status': 'suspicious'},
+            {'type': 'unusual_ip_login', 'desc': 'Login authenticated from untrusted IP 203.45.12.88', 'risk': 45, 'status': 'suspicious'}
+        ]
+    },
+    'unauthorized_usb': {
+        'key': 'unauthorized_usb',
+        'name': 'Unauthorized USB Activity',
+        'threat_vector': 'Removable Media Policy',
+        'description': 'Physical connection of an unauthorized mass storage peripheral to corporate workstation.',
+        'base_score': 58,
+        'severity': 'MEDIUM',
+        'indicators': [
+            'Unregistered USB Mass Storage Device mounted (SanDisk Ultra 64GB)',
+            'Endpoint Removable Media Protection policy violation',
+            'Direct file copy sequence initiated towards removable drive path'
+        ],
+        'recommended_action': 'Verify USB device serial ID, quarantine media, and audit transferred file list.',
+        'activities': [
+            {'type': 'usb_device_connected', 'desc': 'Unregistered USB storage device connected to workstation', 'risk': 40, 'status': 'suspicious'},
+            {'type': 'file_access', 'desc': 'Copied 12 internal engineering schematics to external drive', 'risk': 35, 'status': 'suspicious'}
+        ]
+    },
+    'combined_threat': {
+        'key': 'combined_threat',
+        'name': 'Combined Insider Threat',
+        'threat_vector': 'Multi-Vector Attack Sequence',
+        'description': 'Coordinated multi-stage insider threat combining off-hours login, privilege escalation, USB mounting, and bulk extraction.',
+        'base_score': 95,
+        'severity': 'CRITICAL',
+        'indicators': [
+            'Multi-stage Kill Chain: Off-Hours Ingress -> Privilege Abuse -> Media Mount -> Exfiltration',
+            'Connection established at 03:15 AM outside standard window',
+            'Root/admin elevation gained without supervisory ticket',
+            'Bulk copy of 120 confidential engineering documents to removable mass storage'
+        ],
+        'recommended_action': 'Immediate Containment: Quarantine subject account, revoke network tokens, initiate forensic review.',
+        'activities': [
+            {'type': 'after_hours_login', 'desc': 'Off-hours login detected at 03:15 AM via external link', 'risk': 35, 'status': 'suspicious'},
+            {'type': 'privilege_escalation', 'desc': 'Elevation to administrator privileges recorded on core server', 'risk': 70, 'status': 'critical'},
+            {'type': 'usb_device_connected', 'desc': 'High-capacity external storage SSD mounted to terminal', 'risk': 45, 'status': 'suspicious'},
+            {'type': 'data_exfiltration_attempt', 'desc': '120 confidential project archives transferred to removable drive', 'risk': 88, 'status': 'critical'}
+        ]
+    }
+}
+
+
+def get_simulation_scenarios():
+    """Return all available threat simulation scenarios."""
+    return list(SIMULATION_SCENARIOS.values())
+
+
+def simulate_threat(scenario_key, employee):
+    """
+    Simulate a threat scenario for a specific employee.
+    Calculates dynamic risk score, indicators, activities, and alert metadata.
+    """
+    scenario = SIMULATION_SCENARIOS.get(scenario_key)
+    if not scenario:
+        raise ValueError(f"Unknown scenario key: {scenario_key}")
+
+    current_emp_risk = employee.get('risk_score', 0) if employee else 0
+
+    # Dynamic calculation based on scenario base score and current baseline
+    calculated_score = int(min(100, max(5, (scenario['base_score'] * 0.85) + (current_emp_risk * 0.15))))
+    risk_level = get_risk_level(calculated_score)
+
+    alert_title = f"{scenario['name']} Alert — {employee.get('full_name', 'Employee')}"
+    alert_description = (
+        f"Simulated {scenario['threat_vector']} executed on {employee.get('full_name')} "
+        f"({employee.get('emp_id') or employee.get('username')}). "
+        f"{scenario['description']}"
+    )
+
+    return {
+        'scenario_key': scenario['key'],
+        'scenario_name': scenario['name'],
+        'threat_vector': scenario['threat_vector'],
+        'description': scenario['description'],
+        'risk_score': calculated_score,
+        'risk_level': risk_level,
+        'indicators': scenario['indicators'],
+        'recommended_action': scenario['recommended_action'],
+        'activities': scenario['activities'],
+        'alert_data': {
+            'title': alert_title,
+            'description': alert_description,
+            'severity': risk_level,
+            'risk_score': calculated_score,
+            'incident_type': scenario['threat_vector'],
+            'status': 'New'
+        }
+    }
+

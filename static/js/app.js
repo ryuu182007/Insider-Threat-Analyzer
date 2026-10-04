@@ -1,128 +1,45 @@
 /**
- * Insider Threat Detection System - Frontend Application
+ * ThreatSim - Main Security Operations Console Application Logic
+ * Dark Cherry-Red Cybersecurity Platform
  */
 
 const API = '/api';
 let charts = {};
-let refreshTimer = null;
-let trackerActive = true;
+let allEmployees = [];
+let allScenarios = [];
+let selectedScenarioKey = null;
+let currentSubTab = 'alerts';
+let lastSimulationResult = null;
 
+// Cherry Red Theme Palette for Chart.js
 const THEME = {
-    accent: '#c026d3',
-    accentSecondary: '#7c3aed',
-    success: '#22d3ee',
-    warning: '#fbbf24',
-    danger: '#fb7185',
-    critical: '#e11d48',
-    grid: 'rgba(124, 58, 237, 0.12)',
-    tick: '#7c6a9a',
-    legend: '#c4b5fd'
+    accent: '#B5223E',
+    cherryMain: '#8F1830',
+    cherryHover: '#C92B49',
+    success: '#10b981',
+    warning: '#f59e0b',
+    high: '#f97316',
+    danger: '#B5223E',
+    grid: 'rgba(50, 21, 28, 0.4)',
+    tick: '#A9959A',
+    legend: '#D4C3C7'
 };
 
-function initTheme() {
-    const saved = localStorage.getItem('threat_theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-    applyTheme(saved);
+// ==========================================
+// UTILITY & API HELPERS
+// ==========================================
 
-    document.getElementById('theme-toggle')?.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-theme') || 'dark';
-        const next = current === 'light' ? 'dark' : 'light';
-        applyTheme(next);
-    });
-}
-
-function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.body.className = theme === 'light' ? 'light-mode' : '';
-    localStorage.setItem('threat_theme', theme);
-
-    if (theme === 'light') {
-        THEME.grid = 'rgba(99, 102, 241, 0.12)';
-        THEME.tick = '#64748b';
-        THEME.legend = '#334155';
-    } else {
-        THEME.grid = 'rgba(124, 58, 237, 0.12)';
-        THEME.tick = '#7c6a9a';
-        THEME.legend = '#c4b5fd';
+async function fetchAPI(endpoint, options = {}) {
+    const res = await fetch(`${API}${endpoint}`, options);
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
     }
-
-    refreshIcons();
-    Object.values(charts).forEach(c => {
-        if (c && c.options && c.options.scales) {
-            if (c.options.scales.x && c.options.scales.x.ticks) c.options.scales.x.ticks.color = THEME.tick;
-            if (c.options.scales.y && c.options.scales.y.ticks) c.options.scales.y.ticks.color = THEME.tick;
-            if (c.options.scales.y && c.options.scales.y.grid) c.options.scales.y.grid.color = THEME.grid;
-            c.update();
-        }
-    });
+    return res.json();
 }
 
-function setTrackerState(active) {
-    trackerActive = active;
-    const bar = document.getElementById('command-center-tracker-bar');
-    const badge = document.getElementById('tracker-state-badge');
-    const indicator = document.getElementById('tracker-toggle-indicator');
-    const toggleText = document.getElementById('tracker-toggle-text');
-    const anomalyPanel = document.querySelector('.chart-mini-panel');
-    const subjectTrackerPanel = document.getElementById('subject-tracker-panel');
-
-    if (active) {
-        if (bar) bar.classList.remove('invisible-mode');
-        if (badge) {
-            badge.className = 'tracker-state-badge on';
-            badge.textContent = 'TRACKER ACTIVE (ON)';
-        }
-        if (indicator) indicator.className = 'toggle-indicator on';
-        if (toggleText) toggleText.textContent = 'TRACKER: ON';
-        if (anomalyPanel) anomalyPanel.style.display = '';
-        if (subjectTrackerPanel) subjectTrackerPanel.classList.remove('invisible-mode');
-    } else {
-        if (bar) bar.classList.add('invisible-mode');
-        if (badge) {
-            badge.className = 'tracker-state-badge invisible';
-            badge.textContent = 'TRACKER INVISIBLE';
-        }
-        if (indicator) indicator.className = 'toggle-indicator invisible';
-        if (toggleText) toggleText.textContent = 'TRACKER: INVISIBLE';
-        if (anomalyPanel) anomalyPanel.style.display = 'none';
-        if (subjectTrackerPanel) subjectTrackerPanel.classList.add('invisible-mode');
-    }
-}
-
-function initTrackerControls() {
-    document.getElementById('global-tracker-toggle')?.addEventListener('click', () => {
-        setTrackerState(!trackerActive);
-    });
-}
-
-const VECTOR_ICONS = {
-    failed_login: 'key-round',
-    login: 'log-in',
-    after_hours: 'moon',
-    file_access: 'file-lock',
-    file_download: 'download',
-    bulk_download: 'download-cloud',
-    usb_connected: 'usb',
-    privilege_escalation: 'arrow-up-circle',
-    data_exfiltration: 'upload',
-    cross_department: 'building-2'
-};
-
-// --- Utility Functions ---
-
-function getRiskLevel(score) {
-    if (score >= 80) return 'critical';
-    if (score >= 60) return 'high';
-    if (score >= 30) return 'medium';
-    return 'low';
-}
-
-function getRiskLabel(score) {
-    return getRiskLevel(score).toUpperCase();
-}
-
-function riskBadge(score) {
-    const level = getRiskLevel(score);
-    return `<span class="risk-badge ${level}">${getRiskLabel(score)}</span>`;
+function refreshIcons() {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function formatTime(ts) {
@@ -136,37 +53,32 @@ function formatTime(ts) {
 }
 
 function formatActivityType(type) {
+    if (!type) return '--';
     return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-async function fetchAPI(endpoint) {
-    const res = await fetch(`${API}${endpoint}`);
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
-    }
-    return res.json();
+function getRiskLevel(score) {
+    if (score >= 80) return 'critical';
+    if (score >= 60) return 'high';
+    if (score >= 30) return 'medium';
+    return 'low';
 }
 
-function showError(container, msg) {
-    if (typeof container === 'string') {
-        container = document.getElementById(container);
-    }
-    if (container) {
-        container.innerHTML = `<tr><td colspan="20" class="empty-cell">${msg}</td></tr>`;
-    }
+function riskBadge(score) {
+    const level = getRiskLevel(score);
+    return `<span class="risk-badge ${level}">${level.toUpperCase()}</span>`;
 }
 
-function refreshIcons() {
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+function statusBadge(status) {
+    const s = status || 'normal';
+    return `<span class="status-badge ${s}">${s}</span>`;
 }
 
-function getAnalystInitials() {
-    const nameEl = document.getElementById('analyst-name');
-    if (!nameEl) return 'SA';
-    const parts = nameEl.textContent.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return nameEl.textContent.trim().slice(0, 2).toUpperCase() || 'SA';
+function destroyChart(id) {
+    if (charts[id]) {
+        charts[id].destroy();
+        delete charts[id];
+    }
 }
 
 function chartDefaults() {
@@ -181,140 +93,180 @@ function chartDefaults() {
     };
 }
 
-function makeGradient(ctx, h = 180) {
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, THEME.accent);
-    g.addColorStop(1, THEME.accentSecondary);
-    return g;
+// Modal management
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('active');
+        modal.classList.add('open');
+        refreshIcons();
+    }
 }
 
-// --- Navigation ---
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('active');
+        modal.classList.remove('open');
+    }
+}
+
+// ==========================================
+// NAVIGATION & PAGE ROUTING
+// ==========================================
 
 function initNavigation() {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const page = link.dataset.page;
-            switchPage(page);
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
+            navigateToPage(page);
         });
+    });
+
+    // Mobile nav toggle
+    document.getElementById('mobile-toggle')?.addEventListener('click', () => {
+        document.getElementById('main-sidebar')?.classList.toggle('open');
+    });
+
+    // Theme toggle
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        document.body.className = next === 'light' ? 'light-mode' : '';
     });
 }
 
-function switchPage(page) {
+function navigateToPage(page, subTab = null) {
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const target = document.getElementById(`page-${page}`);
-    if (target) target.classList.add('active');
 
-    // Requirement: In command centre make the tracker on; intra trader (threat radar) tracker should be invisible
-    if (page === 'dashboard' || page === 'users') {
-        setTrackerState(true);
-    } else if (page === 'threats') {
-        setTrackerState(false);
-    }
+    const activeLink = document.querySelector(`.nav-link[data-page="${page}"]`);
+    const activePage = document.getElementById(`page-${page}`);
+
+    if (activeLink) activeLink.classList.add('active');
+    if (activePage) activePage.classList.add('active');
+
+    // Close mobile sidebar if open
+    document.getElementById('main-sidebar')?.classList.remove('open');
 
     switch (page) {
-        case 'dashboard': loadDashboard(); break;
-        case 'users': loadUsers(); break;
-        case 'activity': loadActivity(); break;
-        case 'incidents': loadIncidents(); break;
-        case 'threats': loadThreatAnalysis(); break;
-        case 'settings': initSettingsPage(); break;
+        case 'dashboard':
+            loadDashboard();
+            break;
+        case 'employees':
+            loadEmployees();
+            break;
+        case 'simulator':
+            loadSimulator();
+            break;
+        case 'alerts':
+            loadAlertsAndActivity();
+            if (subTab) switchAlertSubTab(subTab === 'activity-tab' ? 'activity' : 'alerts');
+            break;
+        case 'reports':
+            loadReports();
+            break;
+        case 'settings':
+            refreshIcons();
+            break;
     }
+
     refreshIcons();
 }
 
-// --- Dashboard ---
+// ==========================================
+// 1. DASHBOARD
+// ==========================================
 
 async function loadDashboard() {
     try {
-        const [stats, threatData, activities] = await Promise.all([
+        const [stats, threatData, activities, recentAlerts] = await Promise.all([
             fetchAPI('/dashboard'),
             fetchAPI('/threat-analysis'),
-            fetchAPI('/activity?limit=8')
+            fetchAPI('/activity?limit=6'),
+            fetchAPI('/incidents')
         ]);
 
-        document.getElementById('stat-total-users').textContent = stats.total_users;
-        document.getElementById('stat-active-users').textContent = stats.active_users;
-        document.getElementById('stat-suspicious').textContent = stats.suspicious_users;
-        document.getElementById('stat-incidents').textContent = stats.open_incidents;
-        document.getElementById('system-status').textContent = stats.system_status;
-        document.getElementById('avg-risk').textContent = stats.avg_risk_score;
-        document.getElementById('high-risk-count').textContent = stats.high_risk_users;
-        document.getElementById('critical-count').textContent = stats.critical_incidents;
+        // 4 KPI Summary Cards
+        document.getElementById('stat-total-employees').textContent = stats.total_employees ?? stats.total_users ?? 0;
+        document.getElementById('stat-active-alerts').textContent = stats.active_alerts ?? stats.open_incidents ?? 0;
+        document.getElementById('stat-high-risk-employees').textContent = stats.high_risk_employees ?? stats.high_risk_users ?? 0;
+        document.getElementById('stat-total-simulations').textContent = stats.total_simulations ?? 0;
+        
+        // System status
+        document.getElementById('system-status').textContent = stats.system_status || 'Operational';
+        document.getElementById('dashboard-timestamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
 
-        const level = stats.threat_level;
-        const levelEl = document.getElementById('threat-level');
-        levelEl.textContent = level;
+        // Security Posture Ring & Bar
+        const avgScore = stats.avg_risk_score || 0;
+        const threatLevel = stats.threat_level || 'LOW';
+        
+        document.getElementById('threat-level').textContent = threatLevel;
+        document.getElementById('posture-risk-score').textContent = `${Math.round(avgScore)} / 100`;
+        document.getElementById('posture-risk-bar').style.width = `${Math.min(avgScore, 100)}%`;
 
         const ring = document.getElementById('risk-ring-fill');
-        const pct = Math.min(stats.avg_risk_score / 100, 1);
-        const circumference = 326.7;
-        ring.style.strokeDashoffset = circumference - (pct * circumference);
+        if (ring) {
+            const pct = Math.min(avgScore / 100, 1);
+            const circumference = 326.7;
+            ring.style.strokeDashoffset = circumference - (pct * circumference);
+            ring.style.stroke = threatLevel === 'CRITICAL' ? THEME.danger : threatLevel === 'HIGH' ? THEME.high : threatLevel === 'MEDIUM' ? THEME.warning : THEME.success;
+        }
 
-        const colors = {
-            LOW: THEME.success,
-            MEDIUM: THEME.warning,
-            HIGH: THEME.danger,
-            CRITICAL: THEME.critical
-        };
-        ring.style.stroke = colors[level] || THEME.accent;
-
-        document.getElementById('posture-risk-score').textContent =
-            `${Math.round(stats.avg_risk_score)} / 100`;
-        document.getElementById('posture-risk-bar').style.width = `${pct * 100}%`;
-        document.getElementById('posture-time').textContent =
-            'Updated ' + new Date().toLocaleTimeString();
-
-        document.getElementById('last-updated').textContent =
-            'Updated ' + new Date().toLocaleTimeString();
-
-        renderThreatVectors(threatData.activity_by_category);
+        // Render Dashboard Charts
+        renderDashboardRiskDistChart(threatData.risk_distribution);
         renderDashboardAnomalyChart(threatData.threats_timeline);
-        renderActivityFeed(activities);
 
-        const scanEl = document.getElementById('settings-last-scan');
-        if (scanEl) scanEl.textContent = new Date().toLocaleTimeString();
+        // Render Dashboard Recent Alerts
+        renderDashboardRecentAlerts(recentAlerts.slice(0, 5));
+
+        // Render Dashboard Recent Activities
+        renderDashboardRecentActivities(activities);
+
+        refreshIcons();
     } catch (err) {
-        console.error('Dashboard load error:', err);
+        console.error('Failed to load dashboard:', err);
     }
 }
 
-function renderThreatVectors(categories) {
-    const container = document.getElementById('threat-vectors-list');
-    const entries = Object.entries(categories || {});
-    if (!entries.length) {
-        container.innerHTML = '<div class="empty-cell" style="padding:1rem;">No threat vector data</div>';
-        return;
-    }
+function renderDashboardRiskDistChart(riskDist) {
+    const canvas = document.getElementById('chart-dashboard-risk-dist');
+    if (!canvas) return;
+    destroyChart('chart-dashboard-risk-dist');
 
-    const max = Math.max(...entries.map(([, v]) => v), 1);
-    const top = entries.sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-    container.innerHTML = top.map(([type, count]) => {
-        const icon = VECTOR_ICONS[type] || 'activity';
-        const pct = Math.round((count / max) * 100);
-        return `
-            <div class="vector-item">
-                <div class="vector-icon"><i data-lucide="${icon}"></i></div>
-                <div class="vector-body">
-                    <div class="vector-name">${formatActivityType(type)}</div>
-                    <div class="vector-bar">
-                        <div class="vector-bar-fill" style="width:${pct}%"></div>
-                    </div>
-                </div>
-                <span class="vector-count">${count}</span>
-            </div>`;
-    }).join('');
-    refreshIcons();
+    const rd = riskDist || { low: 0, medium: 0, high: 0, critical: 0 };
+    charts['chart-dashboard-risk-dist'] = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Low (0-29)', 'Medium (30-59)', 'High (60-79)', 'Critical (80+)'],
+            datasets: [{
+                data: [rd.low, rd.medium, rd.high, rd.critical],
+                backgroundColor: [THEME.success, THEME.warning, THEME.high, THEME.danger],
+                borderColor: '#160D10',
+                borderWidth: 2,
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: THEME.legend, font: { size: 10 }, boxWidth: 10, padding: 8 }
+                }
+            }
+        }
+    });
 }
 
 function renderDashboardAnomalyChart(timeline) {
     const canvas = document.getElementById('chart-dashboard-anomaly');
     if (!canvas) return;
-
     destroyChart('chart-dashboard-anomaly');
+
     const ctx = canvas.getContext('2d');
     const labels = (timeline || []).map(t => {
         const d = new Date(t.day);
@@ -322,15 +274,19 @@ function renderDashboardAnomalyChart(timeline) {
     });
     const data = (timeline || []).map(t => t.count || 0);
 
+    const grad = ctx.createLinearGradient(0, 0, 0, 160);
+    grad.addColorStop(0, THEME.cherryHover);
+    grad.addColorStop(1, 'rgba(143, 24, 48, 0.2)');
+
     charts['chart-dashboard-anomaly'] = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labels.length ? labels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
             datasets: [{
+                label: 'Threat Events',
                 data: data.length ? data : [0, 0, 0, 0, 0, 0, 0],
-                backgroundColor: makeGradient(ctx, 150),
-                borderRadius: 6,
-                borderSkipped: false
+                backgroundColor: grad,
+                borderRadius: 4
             }]
         },
         options: {
@@ -344,10 +300,31 @@ function renderDashboardAnomalyChart(timeline) {
     });
 }
 
-function renderActivityFeed(activities) {
-    const container = document.getElementById('activity-feed-list');
-    if (!activities.length) {
-        container.innerHTML = '<div class="empty-cell" style="padding:1.5rem;">No recent alerts — system stable</div>';
+function renderDashboardRecentAlerts(alerts) {
+    const tbody = document.getElementById('dashboard-recent-alerts');
+    if (!tbody) return;
+
+    if (!alerts || alerts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">No recent alerts recorded</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = alerts.map(a => `
+        <tr class="clickable" onclick="showIncidentDetail(${a.id})">
+            <td><strong>${a.title}</strong></td>
+            <td>${a.full_name || a.username}</td>
+            <td><span class="risk-badge ${a.severity.toLowerCase()}">${a.severity}</span></td>
+            <td><span class="status-badge ${a.status.toLowerCase()}">${a.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+function renderDashboardRecentActivities(activities) {
+    const container = document.getElementById('dashboard-recent-activity');
+    if (!container) return;
+
+    if (!activities || activities.length === 0) {
+        container.innerHTML = '<div class="empty-cell">No recent activities logged</div>';
         return;
     }
 
@@ -355,806 +332,962 @@ function renderActivityFeed(activities) {
         const initials = (a.username || '??').slice(0, 2).toUpperCase();
         return `
             <div class="feed-item">
-                <div class="feed-icon ${a.status}">${initials}</div>
+                <div class="feed-icon">${initials}</div>
                 <div class="feed-body">
-                    <div class="feed-title">${a.username || a.full_name} — ${formatActivityType(a.activity_type)}</div>
-                    <div class="feed-meta">${a.ip_address || '--'} · ${a.device || 'Unknown device'}</div>
+                    <div class="feed-title">${a.full_name || a.username} &middot; ${formatActivityType(a.activity_type)}</div>
+                    <div class="feed-meta">${a.description} &middot; ${a.ip_address || '10.0.1.x'}</div>
                 </div>
                 <div class="feed-right">
                     ${riskBadge(a.risk_score)}
                     <div class="feed-time">${formatTime(a.timestamp)}</div>
                 </div>
-            </div>`;
+            </div>
+        `;
     }).join('');
 }
 
-function renderActivityRows(tbodyId, activities, colCount) {
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
-    if (!activities.length) {
-        tbody.innerHTML = `<tr><td colspan="${colCount || 7}" class="empty-cell">No activity records found</td></tr>`;
-        return;
-    }
-    tbody.innerHTML = activities.map(a => {
-        const cols = colCount || 7;
-        let row = `<tr>`;
-        row += `<td>${a.username || a.full_name}</td>`;
-        row += `<td>${formatActivityType(a.activity_type)}</td>`;
-        if (cols >= 7) {
-            row += `<td>${a.ip_address || '--'}</td>`;
-            row += `<td>${a.device || '--'}</td>`;
-        } else {
-            row += `<td>${a.ip_address || '--'}</td>`;
-        }
-        row += `<td>${riskBadge(a.risk_score)}</td>`;
-        if (cols >= 7) {
-            row += `<td>${formatTime(a.timestamp)}</td>`;
-            row += `<td><span class="status-badge ${a.status}">${a.status}</span></td>`;
-        } else {
-            row += `<td>${formatTime(a.timestamp)}</td>`;
-        }
-        row += `</tr>`;
-        return row;
-    }).join('');
-}
+// ==========================================
+// 2. EMPLOYEES DIRECTORY
+// ==========================================
 
-// --- Users ---
+async function loadEmployees() {
+    const search = document.getElementById('employee-search')?.value.trim() || '';
+    const department = document.getElementById('employee-department-filter')?.value || '';
+    const risk = document.getElementById('employee-risk-filter')?.value || '';
+    const status = document.getElementById('employee-status-filter')?.value || '';
 
-async function populateDepartmentFilter() {
-    try {
-        const select = document.getElementById('user-department-filter');
-        if (!select || select.options.length > 1) return;
-        const depts = await fetchAPI('/departments');
-        if (depts && depts.length) {
-            depts.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d;
-                opt.textContent = d;
-                select.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        console.error('Failed to populate departments', e);
-    }
-}
-
-async function loadUsers() {
-    await populateDepartmentFilter();
-
-    const search = document.getElementById('user-search')?.value || '';
-    const risk = document.getElementById('user-risk-filter')?.value || '';
-    const dept = document.getElementById('user-department-filter')?.value || '';
-    
     let url = '/users?';
     if (search) url += `search=${encodeURIComponent(search)}&`;
-    if (risk && risk !== 'intra_trader') url += `risk=${risk}&`;
-    if (dept) url += `department=${encodeURIComponent(dept)}&`;
+    if (department) url += `department=${encodeURIComponent(department)}&`;
+    if (risk) url += `risk=${risk}&`;
+    if (status) url += `status=${status}&`;
 
     try {
-        const [users, tracker] = await Promise.all([
-            fetchAPI(url),
-            fetchAPI(`/tracker/daily${dept ? `?department=${encodeURIComponent(dept)}` : ''}`)
-        ]);
+        const users = await fetchAPI(url);
+        allEmployees = users;
+        populateDepartmentFilter(users);
 
-        // Update Daily Subject Threat Tracker
-        if (tracker) {
-            const mCount = document.getElementById('tracker-monitored-count');
-            if (mCount) mCount.textContent = tracker.total_subjects;
-            const aRisk = document.getElementById('tracker-avg-risk');
-            if (aRisk) aRisk.textContent = tracker.avg_risk;
-            const hRisk = document.getElementById('tracker-high-risk');
-            if (hRisk) hRisk.textContent = tracker.high_risk;
-            const dAnom = document.getElementById('tracker-daily-anomalies');
-            if (dAnom) dAnom.textContent = tracker.daily_anomalies;
-            const dInd = document.getElementById('tracker-dept-indicator');
-            if (dInd) dInd.textContent = `Department: ${dept || 'All'}`;
-        }
+        const tbody = document.getElementById('employees-table-body');
+        if (!tbody) return;
 
-        const tbody = document.getElementById('users-body');
-        let displayedUsers = users;
-        if (risk === 'intra_trader') {
-            displayedUsers = users.filter(u => u.risk_score >= 45 || u.role.toLowerCase().includes('finance') || u.role.toLowerCase().includes('trader'));
-        }
-
-        if (!displayedUsers.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No subjects found matching criteria</td></tr>';
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-cell">No employees match criteria</td></tr>';
             return;
         }
 
-        tbody.innerHTML = displayedUsers.map(u => {
-            let trackBadge = '<span class="daily-track-badge normal">● Stable</span>';
-            if (u.risk_score >= 80) {
-                trackBadge = '<span class="daily-track-badge high">▲ Critical Anomaly</span>';
-            } else if (u.risk_score >= 60) {
-                trackBadge = '<span class="daily-track-badge high">▲ High Drift</span>';
-            } else if (u.risk_score >= 30) {
-                trackBadge = '<span class="daily-track-badge" style="color:var(--warning);border-color:rgba(251,191,36,0.3)">▲ Moderate</span>';
-            }
+        tbody.innerHTML = users.map(u => {
+            const empId = u.emp_id || `EMP-${u.id}`;
+            const isActive = u.status === 'active';
+            const statusClass = isActive ? 'active' : 'disabled';
+            const toggleStatusBtn = isActive
+                ? `<button class="btn btn-sm" style="color:var(--text-muted);" title="Disable Account" onclick="event.stopPropagation(); toggleEmployeeStatus(${u.id}, 'disabled')">Disable</button>`
+                : `<button class="btn btn-sm btn-primary" title="Enable Account" onclick="event.stopPropagation(); toggleEmployeeStatus(${u.id}, 'active')">Enable</button>`;
 
             return `
-                <tr class="clickable" data-user-id="${u.id}">
-                    <td><strong>${u.username}</strong></td>
+                <tr class="clickable" onclick="showEmployeeDetails(${u.id})">
+                    <td>
+                        <div style="font-weight: 600; color: var(--text-primary);">${u.full_name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">${u.username}</div>
+                    </td>
+                    <td style="font-family: var(--font-mono); font-weight: 500;">${empId}</td>
                     <td>${u.department}</td>
                     <td>${u.role}</td>
-                    <td>${riskBadge(u.risk_score)} <span style="color:var(--text-muted);font-size:0.75rem;">(${u.risk_score})</span></td>
-                    <td>${trackBadge}</td>
-                    <td><span class="status-badge ${u.status}">${u.status}</span></td>
-                    <td>${formatTime(u.last_activity)}</td>
+                    <td><span class="status-badge ${statusClass}">${u.status}</span></td>
+                    <td>${riskBadge(u.risk_score)} <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">(${u.risk_score})</span></td>
+                    <td><span style="font-weight: 600; color: ${u.active_alerts > 0 ? 'var(--cherry-hover)' : 'var(--text-muted)'};">${u.active_alerts || 0}</span></td>
+                    <td>${u.simulation_count || 0}</td>
+                    <td>
+                        <div style="display: flex; gap: 6px;" onclick="event.stopPropagation()">
+                            <button class="btn btn-sm" onclick="showEmployeeDetails(${u.id})">View</button>
+                            <button class="btn btn-sm" onclick="openEditEmployeeModal(${u.id})">Edit</button>
+                            ${toggleStatusBtn}
+                        </div>
+                    </td>
                 </tr>
             `;
         }).join('');
 
-        tbody.querySelectorAll('tr.clickable').forEach(row => {
-            row.addEventListener('click', () => showUserDetail(row.dataset.userId));
-        });
+        refreshIcons();
     } catch (err) {
-        showError('users-body', 'Failed to load users');
+        console.error('Failed to load employees:', err);
     }
 }
 
-async function showUserDetail(userId) {
-    try {
-        const user = await fetchAPI(`/users/${userId}`);
-        document.getElementById('modal-user-name').textContent = user.full_name;
+function populateDepartmentFilter(users) {
+    const select = document.getElementById('employee-department-filter');
+    if (!select || select.options.length > 1) return;
 
+    const depts = Array.from(new Set(users.map(u => u.department).filter(Boolean))).sort();
+    depts.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        select.appendChild(opt);
+    });
+}
+
+async function toggleEmployeeStatus(userId, newStatus) {
+    try {
+        await fetchAPI(`/employees/${userId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        loadEmployees();
+        loadDashboard();
+    } catch (err) {
+        alert('Failed to update employee status: ' + err.message);
+    }
+}
+
+async function showEmployeeDetails(userId) {
+    try {
+        const u = await fetchAPI(`/users/${userId}`);
+        document.getElementById('modal-emp-name').textContent = `${u.full_name} (${u.emp_id || 'EMP-' + u.id})`;
+
+        const container = document.getElementById('employee-detail-modal-body');
+        
         let html = `
             <div class="detail-grid">
-                <div class="detail-item"><span class="detail-label">Username</span><span class="detail-value">${user.username}</span></div>
-                <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">${user.email}</span></div>
-                <div class="detail-item"><span class="detail-label">Department</span><span class="detail-value">${user.department}</span></div>
-                <div class="detail-item"><span class="detail-label">Role</span><span class="detail-value">${user.role}</span></div>
-                <div class="detail-item"><span class="detail-label">Risk Score</span><span class="detail-value">${riskBadge(user.risk_score)} (${user.risk_score})</span></div>
-                <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value"><span class="status-badge ${user.status}">${user.status}</span></span></div>
+                <div class="detail-item"><span class="detail-label">Full Name</span><span class="detail-value">${u.full_name}</span></div>
+                <div class="detail-item"><span class="detail-label">Employee ID</span><span class="detail-value">${u.emp_id || 'EMP-' + u.id}</span></div>
+                <div class="detail-item"><span class="detail-label">Username</span><span class="detail-value">${u.username}</span></div>
+                <div class="detail-item"><span class="detail-label">Department</span><span class="detail-value">${u.department}</span></div>
+                <div class="detail-item"><span class="detail-label">Role</span><span class="detail-value">${u.role}</span></div>
+                <div class="detail-item"><span class="detail-label">Account Status</span><span class="detail-value"><span class="status-badge ${u.status}">${u.status}</span></span></div>
+                <div class="detail-item"><span class="detail-label">Corporate Email</span><span class="detail-value">${u.email}</span></div>
+                <div class="detail-item"><span class="detail-label">Current Risk Score</span><span class="detail-value">${riskBadge(u.risk_score)} (${u.risk_score} / 100)</span></div>
             </div>
-            <div class="xp-bar-wrap" style="margin-top:0.75rem;">
-                <div class="xp-bar-label"><span>Subject Risk Level</span><strong>${user.risk_score} / 100</strong></div>
-                <div class="xp-bar"><div class="xp-bar-fill" style="width:${user.risk_score}%"></div></div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="closeModal('employee-detail-modal'); launchSimulationForEmployee(${u.id});">
+                    <i data-lucide="crosshair"></i> Run Threat Simulation on ${u.full_name}
+                </button>
+                <button class="btn" onclick="openEditEmployeeModal(${u.id})">
+                    <i data-lucide="edit"></i> Edit Record
+                </button>
             </div>
         `;
 
-        if (user.threat_analysis && user.threat_analysis.threats.length) {
-            html += `<div class="detail-section"><h4>Detected Threats</h4><ul class="threat-list">`;
-            user.threat_analysis.threats.forEach(t => {
-                html += `<li><strong>${t.type}</strong> — ${t.description} <span class="risk-badge ${t.severity.toLowerCase()}">${t.severity}</span></li>`;
-            });
-            html += `</ul></div>`;
+        // Active Alerts section
+        if (u.incidents && u.incidents.length > 0) {
+            html += `
+                <div style="margin-top: 18px;">
+                    <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 8px;">Security Alerts &amp; Incidents (${u.incidents.length})</h4>
+                    <table class="data-table">
+                        <thead><tr><th>Alert</th><th>Threat Vector</th><th>Severity</th><th>Status</th><th>Detected</th></tr></thead>
+                        <tbody>
+                            ${u.incidents.map(i => `
+                                <tr>
+                                    <td><strong>${i.title}</strong></td>
+                                    <td>${i.incident_type}</td>
+                                    <td><span class="risk-badge ${i.severity.toLowerCase()}">${i.severity}</span></td>
+                                    <td><span class="status-badge ${i.status.toLowerCase()}">${i.status}</span></td>
+                                    <td>${formatTime(i.detected_at)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
-        if (user.recent_activities && user.recent_activities.length) {
-            html += `<div class="detail-section"><h4>Recent Activity</h4>`;
-            html += `<table class="data-table"><thead><tr><th>Activity</th><th>Risk</th><th>Time</th></tr></thead><tbody>`;
-            user.recent_activities.slice(0, 8).forEach(a => {
-                html += `<tr><td>${formatActivityType(a.activity_type)}</td><td>${riskBadge(a.risk_score)}</td><td>${formatTime(a.timestamp)}</td></tr>`;
-            });
-            html += `</tbody></table></div>`;
+        // Simulation History
+        if (u.simulations && u.simulations.length > 0) {
+            html += `
+                <div style="margin-top: 18px;">
+                    <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 8px;">Simulation Execution History (${u.simulations.length})</h4>
+                    <table class="data-table">
+                        <thead><tr><th>Scenario</th><th>Risk Score</th><th>Level</th><th>Alert Created</th><th>Executed</th></tr></thead>
+                        <tbody>
+                            ${u.simulations.map(s => `
+                                <tr>
+                                    <td><strong>${s.scenario_name}</strong></td>
+                                    <td>${s.risk_score}</td>
+                                    <td><span class="risk-badge ${s.risk_level.toLowerCase()}">${s.risk_level}</span></td>
+                                    <td>${s.alert_created ? '<span class="status-badge active">Yes</span>' : '<span class="status-badge normal">Log Only</span>'}</td>
+                                    <td>${formatTime(s.created_at)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
-        if (user.incidents && user.incidents.length) {
-            html += `<div class="detail-section"><h4>Incident History</h4>`;
-            html += `<table class="data-table"><thead><tr><th>Title</th><th>Severity</th><th>Status</th></tr></thead><tbody>`;
-            user.incidents.forEach(i => {
-                html += `<tr><td>${i.title}</td><td>${riskBadge(i.risk_score)}</td><td><span class="status-badge ${i.status.toLowerCase()}">${i.status}</span></td></tr>`;
-            });
-            html += `</tbody></table></div>`;
+        // Recent Activity
+        if (u.recent_activities && u.recent_activities.length > 0) {
+            html += `
+                <div style="margin-top: 18px;">
+                    <h4 style="font-size: 0.9rem; color: var(--text-primary); margin-bottom: 8px;">Recent Activity Logs (Last ${u.recent_activities.length})</h4>
+                    <table class="data-table">
+                        <thead><tr><th>Activity</th><th>Description</th><th>IP Address</th><th>Risk</th><th>Time</th></tr></thead>
+                        <tbody>
+                            ${u.recent_activities.slice(0, 8).map(a => `
+                                <tr>
+                                    <td><strong>${formatActivityType(a.activity_type)}</strong></td>
+                                    <td>${a.description}</td>
+                                    <td>${a.ip_address || '--'}</td>
+                                    <td>${riskBadge(a.risk_score)}</td>
+                                    <td>${formatTime(a.timestamp)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
-        document.getElementById('user-modal-body').innerHTML = html;
-        document.getElementById('user-modal').classList.add('open');
+        container.innerHTML = html;
+        openModal('employee-detail-modal');
+        refreshIcons();
     } catch (err) {
-        alert('Failed to load user details');
+        alert('Failed to load employee details: ' + err.message);
     }
 }
 
-// --- Activity Logs ---
+function openEditEmployeeModal(userId) {
+    const u = allEmployees.find(e => e.id === userId);
+    if (!u) return;
 
-async function loadActivity() {
-    const search = document.getElementById('activity-search').value;
-    const status = document.getElementById('activity-status-filter').value;
-    let url = '/activity?limit=50&';
-    if (search) url += `search=${encodeURIComponent(search)}&`;
-    if (status) url += `status=${status}`;
+    document.getElementById('edit-emp-user-id').value = u.id;
+    document.getElementById('edit-emp-fullname').value = u.full_name;
+    document.getElementById('edit-emp-id').value = u.emp_id || `EMP-${u.id}`;
+    document.getElementById('edit-emp-department').value = u.department;
+    document.getElementById('edit-emp-role').value = u.role;
+    document.getElementById('edit-emp-status').value = u.status;
+    document.getElementById('edit-emp-password').value = '';
+
+    openModal('edit-employee-modal');
+}
+
+// ==========================================
+// 3. THREAT SIMULATOR (CORE FEATURE)
+// ==========================================
+
+async function loadSimulator() {
+    try {
+        const [scenarios, users] = await Promise.all([
+            fetchAPI('/scenarios'),
+            fetchAPI('/users')
+        ]);
+
+        allScenarios = scenarios;
+        allEmployees = users;
+
+        // Populate Target Employee Dropdown
+        const targetSelect = document.getElementById('sim-target-employee');
+        if (targetSelect) {
+            targetSelect.innerHTML = '<option value="">Select target employee…</option>' +
+                users.map(u => `
+                    <option value="${u.id}">${u.full_name} (${u.emp_id || 'EMP-' + u.id}) — ${u.department} [Risk: ${u.risk_score}]</option>
+                `).join('');
+        }
+
+        // Render Scenarios Grid (7 required scenarios)
+        const grid = document.getElementById('sim-scenarios-grid');
+        if (grid) {
+            grid.innerHTML = scenarios.map((s, idx) => {
+                const isSelected = selectedScenarioKey === s.key || (idx === 0 && !selectedScenarioKey);
+                if (isSelected) selectedScenarioKey = s.key;
+
+                return `
+                    <div class="scenario-card ${isSelected ? 'selected' : ''}" data-scenario-key="${s.key}" onclick="selectScenario('${s.key}')">
+                        <div class="scenario-card-header">
+                            <span class="scenario-card-title">${s.name}</span>
+                            <span class="risk-badge ${s.severity.toLowerCase()}">${s.severity}</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--cherry-hover); font-weight: 500;">${s.threat_vector}</div>
+                        <div class="scenario-card-desc">${s.description}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        refreshIcons();
+    } catch (err) {
+        console.error('Failed to load simulator:', err);
+    }
+}
+
+function selectScenario(key) {
+    selectedScenarioKey = key;
+    document.querySelectorAll('.scenario-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.scenarioKey === key);
+    });
+}
+
+function launchSimulationForEmployee(userId) {
+    navigateToPage('simulator');
+    setTimeout(() => {
+        const select = document.getElementById('sim-target-employee');
+        if (select) {
+            select.value = userId;
+            triggerEmployeeMetaUpdate(userId);
+        }
+    }, 200);
+}
+
+function triggerEmployeeMetaUpdate(userId) {
+    const u = allEmployees.find(e => e.id == userId);
+    const metaEl = document.getElementById('sim-employee-meta');
+    if (!metaEl) return;
+
+    if (u) {
+        metaEl.style.display = 'block';
+        metaEl.innerHTML = `Subject: <strong>${u.full_name}</strong> &middot; Current Risk: <strong>${u.risk_score}/100</strong> &middot; Status: <strong>${u.status}</strong>`;
+    } else {
+        metaEl.style.display = 'none';
+    }
+}
+
+async function runSimulation() {
+    const userId = document.getElementById('sim-target-employee')?.value;
+    if (!userId) {
+        alert('Please select an employee subject first.');
+        return;
+    }
+
+    if (!selectedScenarioKey) {
+        alert('Please select a threat scenario to simulate.');
+        return;
+    }
+
+    const autoAlert = document.getElementById('sim-auto-alert-toggle')?.checked ?? true;
+    const btn = document.getElementById('run-simulation-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2"></i> Analyzing threat telemetry…';
+        refreshIcons();
+    }
 
     try {
-        const activities = await fetchAPI(url);
-        renderActivityRows('activity-body', activities, 7);
+        const result = await fetchAPI('/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: parseInt(userId),
+                scenario_key: selectedScenarioKey,
+                create_alert: autoAlert
+            })
+        });
+
+        lastSimulationResult = result;
+        displaySimulationResult(result);
     } catch (err) {
-        showError('activity-body', 'Failed to load activity logs');
+        alert('Simulation failed: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="play"></i> Execute Threat Simulation';
+            refreshIcons();
+        }
     }
 }
 
-// --- Incidents ---
+function displaySimulationResult(res) {
+    document.getElementById('simulation-empty-state').style.display = 'none';
+    const activeResults = document.getElementById('simulation-active-results');
+    activeResults.style.display = 'block';
 
-async function loadIncidents() {
-    const severity = document.getElementById('incident-severity-filter').value;
-    const status = document.getElementById('incident-status-filter').value;
+    document.getElementById('sim-result-scenario-name').textContent = res.scenario_name;
+    document.getElementById('sim-result-vector').textContent = res.threat_vector;
+    
+    const badge = document.getElementById('sim-result-badge');
+    badge.textContent = res.risk_level;
+    badge.className = `risk-badge ${res.risk_level.toLowerCase()}`;
+
+    document.getElementById('sim-result-score').textContent = res.risk_score;
+    document.getElementById('sim-result-employee-display').textContent = `${res.employee_name} (${res.employee_id})`;
+
+    const noteEl = document.getElementById('sim-result-status-note');
+    if (res.alert_created && res.alert_id) {
+        noteEl.innerHTML = `<i data-lucide="check-circle" style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px;"></i> Security Alert #${res.alert_id} created and dispatched to Alerts &amp; Activity console`;
+        noteEl.style.color = 'var(--risk-low)';
+    } else {
+        noteEl.innerHTML = '<i data-lucide="info" style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px;"></i> Telemetry logged into Activity Stream without alert escalation';
+        noteEl.style.color = 'var(--text-muted)';
+    }
+
+    // Indicators list
+    const indicatorsList = document.getElementById('sim-result-indicators');
+    indicatorsList.innerHTML = (res.indicators || []).map(ind => `
+        <li><i data-lucide="alert-octagon" style="width: 14px; height: 14px; color: var(--cherry-hover); flex-shrink: 0; margin-top: 2px;"></i> ${ind}</li>
+    `).join('');
+
+    document.getElementById('sim-result-recommendation').textContent = res.recommended_action;
+
+    // View in alerts button handler
+    const viewAlertBtn = document.getElementById('sim-view-in-alerts-btn');
+    if (viewAlertBtn) {
+        viewAlertBtn.onclick = () => {
+            navigateToPage('alerts');
+            if (res.alert_id) {
+                setTimeout(() => showIncidentDetail(res.alert_id), 300);
+            }
+        };
+    }
+
+    refreshIcons();
+}
+
+function resetSimulator() {
+    document.getElementById('simulation-active-results').style.display = 'none';
+    document.getElementById('simulation-empty-state').style.display = 'block';
+    selectedScenarioKey = 'normal_behaviour';
+    selectScenario('normal_behaviour');
+}
+
+// ==========================================
+// 4. ALERTS & ACTIVITY (MERGED MODULE)
+// ==========================================
+
+function switchAlertSubTab(tab) {
+    currentSubTab = tab;
+    document.getElementById('tab-alerts-btn')?.classList.toggle('active', tab === 'alerts');
+    document.getElementById('tab-activity-btn')?.classList.toggle('active', tab === 'activity');
+
+    document.getElementById('subtab-alerts').style.display = tab === 'alerts' ? 'block' : 'none';
+    document.getElementById('subtab-activity').style.display = tab === 'activity' ? 'block' : 'none';
+
+    if (tab === 'alerts') loadAlertsList();
+    if (tab === 'activity') loadActivityStream();
+}
+
+async function loadAlertsAndActivity() {
+    if (currentSubTab === 'alerts') await loadAlertsList();
+    else await loadActivityStream();
+}
+
+async function loadAlertsList() {
+    const search = document.getElementById('alerts-search')?.value.trim() || '';
+    const severity = document.getElementById('alerts-severity-filter')?.value || '';
+    const status = document.getElementById('alerts-status-filter')?.value || '';
+
     let url = '/incidents?';
     if (severity) url += `severity=${severity}&`;
-    if (status) url += `status=${status}`;
+    if (status) url += `status=${status}&`;
 
     try {
         const incidents = await fetchAPI(url);
-        const tbody = document.getElementById('incidents-body');
-        if (!incidents.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No incidents found</td></tr>';
+        
+        // Update count badge
+        const countBadge = document.getElementById('alerts-tab-count');
+        if (countBadge) countBadge.textContent = incidents.length;
+
+        const tbody = document.getElementById('alerts-table-body');
+        if (!tbody) return;
+
+        let filtered = incidents;
+        if (search) {
+            const q = search.toLowerCase();
+            filtered = incidents.filter(i => 
+                (i.title && i.title.toLowerCase().includes(q)) ||
+                (i.username && i.username.toLowerCase().includes(q)) ||
+                (i.full_name && i.full_name.toLowerCase().includes(q)) ||
+                (i.incident_type && i.incident_type.toLowerCase().includes(q))
+            );
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-cell">No security alerts match filters</td></tr>';
             return;
         }
-        tbody.innerHTML = incidents.map(i => `
-            <tr>
-                <td>#${i.id}</td>
-                <td>${i.username}</td>
+
+        tbody.innerHTML = filtered.map(i => `
+            <tr class="clickable" onclick="showIncidentDetail(${i.id})">
+                <td style="font-family: var(--font-mono);">#${i.id}</td>
+                <td><strong>${i.title}</strong></td>
+                <td>${i.full_name || i.username}</td>
                 <td>${i.incident_type}</td>
-                <td>${riskBadge(i.risk_score)}</td>
+                <td><span class="risk-badge ${i.severity.toLowerCase()}">${i.severity}</span></td>
                 <td>${i.risk_score}</td>
                 <td>${formatTime(i.detected_at)}</td>
                 <td><span class="status-badge ${i.status.toLowerCase()}">${i.status}</span></td>
                 <td>
-                    <button class="btn btn-primary" onclick="showIncidentDetail(${i.id})">View</button>
-                    <button class="btn" style="border-color:var(--warning);color:var(--warning);margin-left:4px;" onclick="investigateIncident(${i.id})">Investigate</button>
+                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showIncidentDetail(${i.id})">
+                        Investigate
+                    </button>
                 </td>
             </tr>
         `).join('');
+
+        refreshIcons();
     } catch (err) {
-        showError('incidents-body', 'Failed to load incidents');
+        console.error('Failed to load alerts list:', err);
     }
 }
 
-async function investigateIncident(id) {
-    await updateIncidentStatus(id, 'Investigating');
-    showIncidentDetail(id, true);
+async function loadActivityStream() {
+    const search = document.getElementById('activity-search')?.value.trim() || '';
+    const status = document.getElementById('activity-status-filter')?.value || '';
+
+    let url = '/activity?limit=50&';
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (status) url += `status=${status}&`;
+
+    try {
+        const acts = await fetchAPI(url);
+        const tbody = document.getElementById('activity-table-body');
+        if (!tbody) return;
+
+        if (acts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No activity records logged</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = acts.map(a => `
+            <tr>
+                <td><strong>${a.full_name || a.username}</strong></td>
+                <td>${formatActivityType(a.activity_type)}</td>
+                <td>${a.description}</td>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem;">${a.ip_address || '--'}</td>
+                <td>${a.device || 'Workstation'}</td>
+                <td>${riskBadge(a.risk_score)}</td>
+                <td>${formatTime(a.timestamp)}</td>
+                <td><span class="status-badge ${a.status}">${a.status}</span></td>
+            </tr>
+        `).join('');
+
+        refreshIcons();
+    } catch (err) {
+        console.error('Failed to load activity stream:', err);
+    }
 }
 
-async function showIncidentDetail(id, isInvestigation = false) {
+// Alert Investigation & Embedded Actions (Absorbs Tasks!)
+async function showIncidentDetail(alertId) {
     try {
-        const inc = await fetchAPI(`/incidents/${id}`);
-        document.getElementById('modal-incident-title').textContent = isInvestigation ? `Incident #${inc.id} — Active Investigation` : inc.title;
-        document.getElementById('incident-modal-body').innerHTML = `
-            <div class="investigation-workbench">
-                <div class="investigation-header">
-                    <div>
-                        <h4 style="font-size:1.05rem;color:var(--text-primary);margin-bottom:0.25rem;">${inc.title}</h4>
-                        <span style="font-size:0.78rem;color:var(--text-muted);">${inc.incident_type} &middot; Detected ${formatTime(inc.detected_at)}</span>
-                    </div>
-                    <span class="investigation-badge">${inc.status}</span>
+        const inc = await fetchAPI(`/incidents/${alertId}`);
+        document.getElementById('modal-alert-title').textContent = `Alert #${inc.id} — ${inc.title}`;
+
+        const container = document.getElementById('alert-detail-modal-body');
+        container.innerHTML = `
+            <div class="detail-grid">
+                <div class="detail-item"><span class="detail-label">Alert ID</span><span class="detail-value">#${inc.id}</span></div>
+                <div class="detail-item"><span class="detail-label">Subject</span><span class="detail-value">${inc.full_name} (${inc.username})</span></div>
+                <div class="detail-item"><span class="detail-label">Department</span><span class="detail-value">${inc.department || '--'}</span></div>
+                <div class="detail-item"><span class="detail-label">Threat Vector</span><span class="detail-value">${inc.incident_type}</span></div>
+                <div class="detail-item"><span class="detail-label">Calculated Risk</span><span class="detail-value">${riskBadge(inc.risk_score)} (${inc.risk_score})</span></div>
+                <div class="detail-item"><span class="detail-label">Current Status</span><span class="detail-value"><span class="status-badge ${inc.status.toLowerCase()}">${inc.status}</span></span></div>
+            </div>
+
+            <div style="margin-bottom: 18px; padding: 14px; background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <h4 style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Incident Evidence &amp; Description</h4>
+                <p style="font-size: 0.86rem; color: var(--text-primary); line-height: 1.5;">${inc.description}</p>
+            </div>
+
+            <!-- EMBEDDED TASK ACTIONS (Replacing standalone tasks) -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <h4 style="font-size: 0.88rem; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="check-square" style="width: 16px; height: 16px; color: var(--cherry-accent);"></i>
+                    Embedded Containment &amp; Investigation Actions
+                </h4>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+                    <button class="btn btn-sm" onclick="triggerAlertAction(${inc.id}, 'review_activity')">
+                        <i data-lucide="scroll-text"></i> Review Employee Activity
+                    </button>
+                    <button class="btn btn-sm" onclick="triggerAlertAction(${inc.id}, 'verify_usb')">
+                        <i data-lucide="usb"></i> Verify USB Device
+                    </button>
+                    <button class="btn btn-sm" onclick="triggerAlertAction(${inc.id}, 'check_files')">
+                        <i data-lucide="file-search"></i> Check Accessed Files
+                    </button>
+                    <button class="btn btn-sm" style="color: var(--risk-med);" onclick="triggerAlertAction(${inc.id}, 'mark_reviewed')">
+                        <i data-lucide="eye"></i> Mark as Reviewed
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="triggerAlertAction(${inc.id}, 'resolve_alert')">
+                        <i data-lucide="check-circle"></i> Resolve Alert
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="triggerAlertAction(${inc.id}, 'quarantine')">
+                        <i data-lucide="lock"></i> Quarantine Account
+                    </button>
                 </div>
 
-                <div class="detail-grid">
-                    <div class="detail-item"><span class="detail-label">Incident ID</span><span class="detail-value">#${inc.id}</span></div>
-                    <div class="detail-item"><span class="detail-label">Subject</span><span class="detail-value">${inc.full_name} (${inc.username})</span></div>
-                    <div class="detail-item"><span class="detail-label">Department</span><span class="detail-value">${inc.department || '--'}</span></div>
-                    <div class="detail-item"><span class="detail-label">Severity</span><span class="detail-value">${riskBadge(inc.risk_score)} (${inc.risk_score})</span></div>
-                    <div class="detail-item"><span class="detail-label">Subject Email</span><span class="detail-value">${inc.email || '--'}</span></div>
-                    <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value"><span class="status-badge ${inc.status.toLowerCase()}">${inc.status}</span></span></div>
-                </div>
-
-                <div class="detail-section">
-                    <h4>Incident Evidence & Description</h4>
-                    <p style="font-size:0.85rem;color:var(--text-secondary);background:var(--bg-void);padding:0.8rem;border-radius:8px;border:1px solid var(--border-color);line-height:1.5;">${inc.description}</p>
-                </div>
-
-                <div class="detail-section">
-                    <h4>Active Containment & Investigation Actions</h4>
-                    <div class="investigation-actions-bar">
-                        ${inc.status !== 'Investigating' ? `<button class="btn btn-warning" onclick="updateIncidentStatus(${inc.id}, 'Investigating');showIncidentDetail(${inc.id}, true);">Set Investigating</button>` : ''}
-                        <button class="btn" style="border-color:var(--danger);color:var(--danger);" onclick="quarantineSubject('${inc.username}', ${inc.id})">Quarantine Subject</button>
-                        <button class="btn" style="border-color:var(--accent);color:var(--accent);" onclick="escalateIncident(${inc.id})">Escalate to SOC</button>
-                        ${inc.status !== 'Resolved' ? `<button class="btn btn-primary" onclick="updateIncidentStatus(${inc.id}, 'Resolved');document.getElementById('incident-modal').classList.remove('open');document.getElementById('incident-modal').classList.remove('active');">Mark Resolved</button>` : ''}
-                    </div>
+                <div id="alert-action-output-box" style="display: none; padding: 14px; background: var(--bg-input); border-radius: var(--radius-sm); border: 1px solid var(--border-highlight);">
+                    <!-- Dynamic action output -->
                 </div>
             </div>
         `;
-        const modal = document.getElementById('incident-modal');
-        modal.classList.add('open');
-        modal.classList.add('active');
+
+        openModal('alert-detail-modal');
+        refreshIcons();
     } catch (err) {
-        alert('Failed to load incident details');
+        alert('Failed to load incident detail: ' + err.message);
     }
 }
 
-function quarantineSubject(username, id) {
-    appendAuditLog(`QUARANTINE ENFORCED: Subject '${username}' isolated following Incident #${id}`);
-    alert(`Subject account '${username}' has been quarantined. Network access restricted and auth tokens revoked.`);
-}
+async function triggerAlertAction(alertId, actionType) {
+    const box = document.getElementById('alert-action-output-box');
+    if (!box) return;
 
-function escalateIncident(id) {
-    appendAuditLog(`ESCALATION: Incident #${id} dispatched to Senior Threat Response & Legal Counsel`);
-    alert(`Incident #${id} escalated to Senior Incident Commander.`);
-}
+    box.style.display = 'block';
+    box.innerHTML = '<div class="loading-cell" style="padding: 1rem;">Executing operational action…</div>';
 
-async function updateIncidentStatus(id, status) {
     try {
-        await fetch(`${API}/incidents/${id}`, {
-            method: 'PUT',
+        const res = await fetchAPI(`/alerts/${alertId}/action`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ action: actionType })
         });
-        loadIncidents();
+
+        let content = `<div style="font-weight: 600; color: var(--cherry-hover); margin-bottom: 8px;">${res.message || 'Action executed successfully.'}</div>`;
+
+        if (res.activities && res.activities.length) {
+            content += `
+                <table class="data-table" style="margin-top: 8px;">
+                    <thead><tr><th>Activity</th><th>Description</th><th>Risk</th><th>Time</th></tr></thead>
+                    <tbody>
+                        ${res.activities.slice(0, 6).map(a => `
+                            <tr>
+                                <td>${formatActivityType(a.activity_type)}</td>
+                                <td>${a.description}</td>
+                                <td>${riskBadge(a.risk_score)}</td>
+                                <td>${formatTime(a.timestamp)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        if (res.accessed_files && res.accessed_files.length) {
+            content += `
+                <table class="data-table" style="margin-top: 8px;">
+                    <thead><tr><th>Event</th><th>Resource Description</th><th>Time</th></tr></thead>
+                    <tbody>
+                        ${res.accessed_files.map(f => `
+                            <tr>
+                                <td>${formatActivityType(f.activity_type)}</td>
+                                <td>${f.description}</td>
+                                <td>${formatTime(f.timestamp)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        box.innerHTML = content;
+        loadAlertsList();
         loadDashboard();
-        appendAuditLog(`Incident #${id} status updated to ${status}`);
+        refreshIcons();
     } catch (err) {
-        alert('Failed to update incident');
+        box.innerHTML = `<div style="color: var(--risk-crit);">Action failed: ${err.message}</div>`;
     }
 }
 
-// --- Threat Analysis ---
+// ==========================================
+// 5. REPORTS
+// ==========================================
 
-async function loadThreatAnalysis() {
+async function loadReports() {
     try {
-        const data = await fetchAPI('/threat-analysis');
+        const summary = await fetchAPI('/reports/summary');
 
-        const tbody = document.getElementById('top-risky-body');
-        if (data.top_risky_users.length) {
-            tbody.innerHTML = data.top_risky_users.map((u, i) => `
-                <tr class="clickable" data-user-id="${u.id}">
-                    <td><span style="color:var(--accent);font-family:var(--font-mono);margin-right:0.35rem;">#${i + 1}</span>${u.username}</td>
-                    <td>${u.full_name}</td>
-                    <td>${u.department}</td>
-                    <td>${riskBadge(u.risk_score)} (${u.risk_score})</td>
+        document.getElementById('report-total-employees').textContent = summary.total_employees;
+        document.getElementById('report-total-simulations').textContent = summary.total_simulations;
+        document.getElementById('report-total-alerts').textContent = summary.total_alerts;
+
+        const critCount = (summary.events_by_severity?.CRITICAL || 0) + (summary.events_by_severity?.HIGH || 0);
+        document.getElementById('report-critical-events').textContent = critCount;
+
+        // Most simulated scenario
+        document.getElementById('report-most-sim-name').textContent = summary.most_simulated_scenario?.scenario_name || 'None';
+        document.getElementById('report-most-sim-count').textContent = summary.most_simulated_scenario?.count || 0;
+
+        // Breakdown list
+        const breakdownList = document.getElementById('report-simulations-breakdown-list');
+        if (breakdownList && summary.simulations_breakdown) {
+            breakdownList.innerHTML = summary.simulations_breakdown.map(b => `
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; padding: 4px 8px; background: var(--bg-card); border-radius: 4px;">
+                    <span>${b.scenario_name}</span>
+                    <strong style="color: var(--cherry-hover); font-family: var(--font-mono);">${b.count}</strong>
+                </div>
+            `).join('');
+        }
+
+        // Render Report Risk Chart
+        renderReportsRiskChart(summary.risk_distribution);
+
+        // Highest-Risk Employees ranking table
+        const tbody = document.getElementById('report-top-risky-body');
+        if (tbody && summary.highest_risk_employees) {
+            tbody.innerHTML = summary.highest_risk_employees.map((e, idx) => `
+                <tr>
+                    <td style="font-family: var(--font-mono); font-weight: 700; color: var(--cherry-hover);">#${idx + 1}</td>
+                    <td><strong>${e.full_name}</strong> <span style="font-size: 0.75rem; color: var(--text-muted);">(${e.username})</span></td>
+                    <td style="font-family: var(--font-mono);">${e.emp_id || 'EMP-' + e.id}</td>
+                    <td>${e.department}</td>
+                    <td>${e.role}</td>
+                    <td>${riskBadge(e.risk_score)} (${e.risk_score})</td>
+                    <td><span class="status-badge ${e.status}">${e.status}</span></td>
                 </tr>
             `).join('');
-            tbody.querySelectorAll('tr.clickable').forEach(row => {
-                row.addEventListener('click', () => {
-                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                    document.querySelector('[data-page="users"]').classList.add('active');
-                    switchPage('users');
-                    showUserDetail(row.dataset.userId);
-                });
-            });
         }
 
-        renderCharts(data);
+        refreshIcons();
     } catch (err) {
-        showError('top-risky-body', 'Failed to load threat analysis');
+        console.error('Failed to load reports:', err);
     }
 }
 
-function renderCharts(data) {
-    const defaults = chartDefaults();
+function renderReportsRiskChart(riskDist) {
+    const canvas = document.getElementById('chart-reports-risk-dist');
+    if (!canvas) return;
+    destroyChart('chart-reports-risk-dist');
 
-    destroyChart('chart-risk-dist');
-    const rd = data.risk_distribution;
-    charts['chart-risk-dist'] = new Chart(document.getElementById('chart-risk-dist'), {
-        type: 'doughnut',
+    const rd = riskDist || { low: 0, medium: 0, high: 0, critical: 0 };
+    charts['chart-reports-risk-dist'] = new Chart(canvas, {
+        type: 'bar',
         data: {
-            labels: ['Low', 'Medium', 'High', 'Critical'],
+            labels: ['Low (0-29)', 'Medium (30-59)', 'High (60-79)', 'Critical (80+)'],
             datasets: [{
+                label: 'Employee Distribution',
                 data: [rd.low, rd.medium, rd.high, rd.critical],
-                backgroundColor: [THEME.success, THEME.warning, THEME.danger, THEME.critical],
-                borderWidth: 0,
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            ...defaults,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { color: THEME.legend, font: { size: 11 }, padding: 12 }
-                }
-            }
-        }
-    });
-
-    destroyChart('chart-incidents');
-    const is = data.incidents_by_severity;
-    charts['chart-incidents'] = new Chart(document.getElementById('chart-incidents'), {
-        type: 'bar',
-        data: {
-            labels: Object.keys(is),
-            datasets: [{
-                data: Object.values(is),
-                backgroundColor: [THEME.success, THEME.warning, THEME.danger, THEME.critical],
-                borderRadius: 6
-            }]
-        },
-        options: { ...defaults, plugins: { legend: { display: false } } }
-    });
-
-    destroyChart('chart-activity');
-    const ac = data.activity_by_category;
-    const acLabels = Object.keys(ac).map(formatActivityType);
-    const actCanvas = document.getElementById('chart-activity');
-    const actCtx = actCanvas.getContext('2d');
-    charts['chart-activity'] = new Chart(actCanvas, {
-        type: 'bar',
-        data: {
-            labels: acLabels,
-            datasets: [{
-                data: Object.values(ac),
-                backgroundColor: makeGradient(actCtx, 220),
+                backgroundColor: [THEME.success, THEME.warning, THEME.high, THEME.danger],
                 borderRadius: 6
             }]
         },
         options: {
-            ...defaults,
-            indexAxis: 'y',
+            ...chartDefaults(),
             plugins: { legend: { display: false } }
         }
     });
-
-    destroyChart('chart-timeline');
-    const tl = data.threats_timeline;
-    const tlCanvas = document.getElementById('chart-timeline');
-    const tlCtx = tlCanvas.getContext('2d');
-    const lineGrad = tlCtx.createLinearGradient(0, 0, 0, 220);
-    lineGrad.addColorStop(0, 'rgba(192, 38, 211, 0.35)');
-    lineGrad.addColorStop(1, 'rgba(192, 38, 211, 0)');
-
-    charts['chart-timeline'] = new Chart(tlCanvas, {
-        type: 'line',
-        data: {
-            labels: tl.map(t => t.day),
-            datasets: [{
-                label: 'Avg Risk Score',
-                data: tl.map(t => Math.round(t.avg_risk * 10) / 10),
-                borderColor: THEME.accent,
-                backgroundColor: lineGrad,
-                fill: true,
-                tension: 0.35,
-                pointRadius: 4,
-                pointBackgroundColor: THEME.accent,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 1
-            }]
-        },
-        options: defaults
-    });
 }
 
-function destroyChart(id) {
-    if (charts[id]) {
-        charts[id].destroy();
-        delete charts[id];
-    }
-}
-
-// --- Settings ---
-
-function initSettingsTabs() {
-    document.querySelectorAll('.settings-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const target = tab.dataset.settingsTab;
-            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById(`settings-${target}`).classList.add('active');
-            refreshIcons();
-        });
-    });
-}
-
-function initSettingsSliders() {
-    const failedSlider = document.getElementById('setting-failed-threshold');
-    const failedVal = document.getElementById('setting-failed-threshold-val');
-    if (failedSlider) {
-        failedSlider.addEventListener('input', () => {
-            failedVal.textContent = failedSlider.value;
-        });
-    }
-
-    const incSlider = document.getElementById('setting-incident-threshold');
-    const incVal = document.getElementById('setting-incident-threshold-val');
-    if (incSlider) {
-        incSlider.addEventListener('input', () => {
-            incVal.textContent = incSlider.value;
-        });
-    }
-}
-
-function loadSettingsFromStorage() {
+async function generateExecutiveReport() {
     try {
-        const saved = JSON.parse(localStorage.getItem('itds_settings') || '{}');
-        if (saved.failedThreshold) {
-            const el = document.getElementById('setting-failed-threshold');
-            if (el) { el.value = saved.failedThreshold; document.getElementById('setting-failed-threshold-val').textContent = saved.failedThreshold; }
-        }
-        if (saved.incidentThreshold) {
-            const el = document.getElementById('setting-incident-threshold');
-            if (el) { el.value = saved.incidentThreshold; document.getElementById('setting-incident-threshold-val').textContent = saved.incidentThreshold; }
-        }
-        if (saved.refreshInterval) {
-            const el = document.getElementById('setting-refresh-interval');
-            if (el) el.value = saved.refreshInterval;
-        }
-        if (saved.toggles) {
-            Object.entries(saved.toggles).forEach(([key, val]) => {
-                const input = document.querySelector(`[data-setting="${key}"]`);
-                if (input) input.checked = val;
-            });
-        }
-    } catch (_) { /* ignore */ }
-}
+        const [summary, stats] = await Promise.all([
+            fetchAPI('/reports/summary'),
+            fetchAPI('/dashboard')
+        ]);
 
-function saveSettingsToStorage() {
-    const toggles = {};
-    document.querySelectorAll('[data-setting]').forEach(el => {
-        toggles[el.dataset.setting] = el.checked;
-    });
-    const settings = {
-        failedThreshold: document.getElementById('setting-failed-threshold')?.value,
-        incidentThreshold: document.getElementById('setting-incident-threshold')?.value,
-        refreshInterval: document.getElementById('setting-refresh-interval')?.value,
-        toggles
-    };
-    localStorage.setItem('itds_settings', JSON.stringify(settings));
-    appendAuditLog('Detection configuration saved locally');
-    setupRefreshTimer();
-}
+        const container = document.getElementById('report-preview-modal-body');
+        container.innerHTML = `
+            <div style="padding: 10px; font-family: var(--font-sans);">
+                <div style="border-bottom: 2px solid var(--border-cherry); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <h2 style="font-size: 1.4rem; color: var(--cherry-hover); margin-bottom: 2px;">ThreatSim Insider Threat Executive Report</h2>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Confidential &middot; Security Operations Center Briefing</span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); text-align: right; font-family: var(--font-mono);">
+                        Generated: ${new Date().toLocaleString()}<br>
+                        Status: <strong>${stats.system_status}</strong>
+                    </div>
+                </div>
 
-function resetSettingsDefaults() {
-    localStorage.removeItem('itds_settings');
-    document.getElementById('setting-failed-threshold').value = 3;
-    document.getElementById('setting-failed-threshold-val').textContent = '3';
-    document.getElementById('setting-incident-threshold').value = 40;
-    document.getElementById('setting-incident-threshold-val').textContent = '40';
-    document.getElementById('setting-refresh-interval').value = 30;
-    document.querySelectorAll('[data-setting]').forEach(el => { el.checked = true; });
-    appendAuditLog('Settings reset to defaults');
-    setupRefreshTimer();
-}
+                <div class="summary-cards" style="margin-bottom: 20px;">
+                    <div class="stat-card" style="padding: 12px;">
+                        <div class="stat-body">
+                            <span class="stat-label">Monitored Staff</span>
+                            <span class="stat-value" style="font-size: 1.3rem;">${summary.total_employees}</span>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="padding: 12px;">
+                        <div class="stat-body">
+                            <span class="stat-label">Total Alerts</span>
+                            <span class="stat-value danger" style="font-size: 1.3rem;">${summary.total_alerts}</span>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="padding: 12px;">
+                        <div class="stat-body">
+                            <span class="stat-label">Simulations</span>
+                            <span class="stat-value" style="font-size: 1.3rem;">${summary.total_simulations}</span>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="padding: 12px;">
+                        <div class="stat-body">
+                            <span class="stat-label">Global Risk</span>
+                            <span class="stat-value warning" style="font-size: 1.3rem;">${stats.avg_risk_score} / 100</span>
+                        </div>
+                    </div>
+                </div>
 
-function appendAuditLog(message) {
-    const list = document.getElementById('audit-log-list');
-    if (!list) return;
-    const item = document.createElement('div');
-    item.className = 'feed-item';
-    item.innerHTML = `
-        <div class="feed-icon normal"><i data-lucide="settings"></i></div>
-        <div class="feed-body">
-            <div class="feed-title">${message}</div>
-            <div class="feed-meta">Configuration change</div>
-        </div>
-        <div class="feed-right">
-            <div class="feed-time">${new Date().toLocaleTimeString()}</div>
-        </div>`;
-    list.prepend(item);
-    refreshIcons();
-}
+                <div style="margin-bottom: 18px;">
+                    <h4 style="font-size: 0.92rem; color: var(--text-primary); margin-bottom: 8px;">Top Identified Risk Subjects</h4>
+                    <table class="data-table">
+                        <thead><tr><th>Rank</th><th>Employee</th><th>ID</th><th>Department</th><th>Risk</th></tr></thead>
+                        <tbody>
+                            ${summary.highest_risk_employees.slice(0, 5).map((e, idx) => `
+                                <tr>
+                                    <td>#${idx + 1}</td>
+                                    <td><strong>${e.full_name}</strong></td>
+                                    <td>${e.emp_id}</td>
+                                    <td>${e.department}</td>
+                                    <td>${riskBadge(e.risk_score)} (${e.risk_score})</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
 
-function initSettingsPage() {
-    document.getElementById('settings-last-scan').textContent = new Date().toLocaleTimeString();
-    refreshIcons();
-}
+                <div style="display: flex; gap: 10px; margin-top: 24px;">
+                    <button class="btn btn-primary" onclick="window.print()">
+                        <i data-lucide="printer"></i> Print / Save PDF
+                    </button>
+                    <button class="btn" onclick="closeModal('report-preview-modal')">Close</button>
+                </div>
+            </div>
+        `;
 
-function setupRefreshTimer() {
-    if (refreshTimer) clearInterval(refreshTimer);
-    let interval = 30000;
-    try {
-        const saved = JSON.parse(localStorage.getItem('itds_settings') || '{}');
-        if (saved.refreshInterval) interval = parseInt(saved.refreshInterval, 10) * 1000;
-    } catch (_) { /* ignore */ }
-    refreshTimer = setInterval(() => {
-        const activePage = document.querySelector('.page.active');
-        if (activePage && activePage.id === 'page-dashboard') {
-            loadDashboard();
-        }
-    }, interval);
-}
-
-// --- Global Search ---
-
-function initGlobalSearch() {
-    const input = document.getElementById('global-search');
-    if (!input) return;
-    let debounce;
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const q = input.value.trim();
-            if (!q) return;
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.querySelector('[data-page="users"]').classList.add('active');
-            switchPage('users');
-            document.getElementById('user-search').value = q;
-            loadUsers();
-        }
-    });
-    input.addEventListener('input', () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(() => {
-            const q = input.value.trim();
-            if (q.length >= 2) {
-                document.getElementById('user-search').value = q;
-            }
-        }, 300);
-    });
-}
-
-// --- Event Listeners ---
-
-function initFilters() {
-    let debounce;
-    document.getElementById('user-search')?.addEventListener('input', () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(loadUsers, 300);
-    });
-    document.getElementById('user-department-filter')?.addEventListener('change', loadUsers);
-    document.getElementById('user-risk-filter')?.addEventListener('change', loadUsers);
-
-    document.getElementById('activity-search')?.addEventListener('input', () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(loadActivity, 300);
-    });
-    document.getElementById('activity-status-filter')?.addEventListener('change', loadActivity);
-
-    document.getElementById('incident-severity-filter')?.addEventListener('change', loadIncidents);
-    document.getElementById('incident-status-filter')?.addEventListener('change', loadIncidents);
-}
-
-function initModals() {
-    document.getElementById('close-user-modal')?.addEventListener('click', () => {
-        document.getElementById('user-modal').classList.remove('open');
-        document.getElementById('user-modal').classList.remove('active');
-    });
-    document.getElementById('close-incident-modal')?.addEventListener('click', () => {
-        document.getElementById('incident-modal').classList.remove('open');
-        document.getElementById('incident-modal').classList.remove('active');
-    });
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('open');
-                modal.classList.remove('active');
-            }
-        });
-    });
-}
-
-function initSettingsActions() {
-    document.getElementById('settings-save-btn')?.addEventListener('click', saveSettingsToStorage);
-    document.getElementById('settings-reset-btn')?.addEventListener('click', resetSettingsDefaults);
-    document.getElementById('setting-refresh-interval')?.addEventListener('change', () => {
-        saveSettingsToStorage();
-    });
-}
-
-// --- Tasks & Members Initialization ---
-function initMemberAndTaskModals() {
-    const addMemberModal = document.getElementById('add-member-modal');
-    const assignTaskModal = document.getElementById('assign-task-modal');
-    
-    // Add Member buttons in Subject and Incident tabs
-    document.getElementById('add-member-btn')?.addEventListener('click', () => {
-        addMemberModal?.classList.add('active');
-        addMemberModal?.classList.add('open');
-    });
-    document.getElementById('add-member-incident-btn')?.addEventListener('click', () => {
-        addMemberModal?.classList.add('active');
-        addMemberModal?.classList.add('open');
-    });
-    document.getElementById('close-add-member-modal')?.addEventListener('click', () => {
-        addMemberModal?.classList.remove('active');
-        addMemberModal?.classList.remove('open');
-    });
-    
-    document.getElementById('assign-task-btn')?.addEventListener('click', () => {
-        assignTaskModal?.classList.add('active');
-        assignTaskModal?.classList.add('open');
-    });
-    document.getElementById('close-assign-task-modal')?.addEventListener('click', () => {
-        assignTaskModal?.classList.remove('active');
-        assignTaskModal?.classList.remove('open');
-    });
-
-    // Add Member Form
-    document.getElementById('add-member-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = {
-            username: document.getElementById('member-username').value.trim(),
-            full_name: document.getElementById('member-fullname').value.trim(),
-            department: document.getElementById('member-department').value.trim(),
-            role: document.getElementById('member-role').value.trim(),
-            email: document.getElementById('member-email').value.trim(),
-            password: document.getElementById('member-password').value.trim()
-        };
-        try {
-            const res = await fetch('/api/members', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (res.ok) {
-                alert('Member created successfully!');
-                addMemberModal.classList.remove('active');
-                addMemberModal.classList.remove('open');
-                e.target.reset();
-                loadUsers();
-                loadIncidents();
-                loadDashboard();
-            } else {
-                const err = await res.json();
-                alert('Error: ' + (err.error || 'Failed to create member'));
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Failed to connect to server.');
-        }
-    });
-
-    // Assign Task Form
-    document.getElementById('assign-task-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = {
-            user_id: parseInt(document.getElementById('task-user-id').value),
-            title: document.getElementById('task-title').value.trim(),
-            description: document.getElementById('task-description').value.trim()
-        };
-        try {
-            const res = await fetch('/api/tasks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (res.ok) {
-                alert('Task assigned successfully!');
-                assignTaskModal.classList.remove('active');
-                assignTaskModal.classList.remove('open');
-                e.target.reset();
-                loadTasks();
-            } else {
-                const err = await res.json();
-                alert('Error: ' + err.error);
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    });
-}
-
-async function loadTasks() {
-    const tbody = document.getElementById('tasks-body');
-    if (!tbody) return;
-    try {
-        const res = await fetch('/api/tasks');
-        const tasks = await res.json();
-        tbody.innerHTML = '';
-        if(tasks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No tasks found</td></tr>';
-            return;
-        }
-        tbody.innerHTML = tasks.map(task => {
-            const statusClass = task.status === 'Completed' ? 'status-normal' : 'status-warning';
-            return `
-                <tr>
-                    <td>#${task.id}</td>
-                    <td>${task.full_name} (${task.username})</td>
-                    <td>${task.title}</td>
-                    <td><span class="status-badge ${statusClass}">${task.status}</span></td>
-                    <td>${formatTime(task.created_at)}</td>
-                </tr>
-            `;
-        }).join('');
+        openModal('report-preview-modal');
+        refreshIcons();
     } catch (err) {
-        console.error(err);
-        tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Error loading tasks</td></tr>';
+        alert('Failed to generate report: ' + err.message);
     }
 }
 
-// --- Application Master Boot ---
-document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    initTrackerControls();
-    refreshIcons();
+// ==========================================
+// FORM SUBMISSIONS & EVENT LISTENERS
+// ==========================================
 
-    const initialsEl = document.getElementById('analyst-initials');
-    if (initialsEl) initialsEl.textContent = getAnalystInitials();
+function initForms() {
+    // Add Employee Form
+    document.getElementById('add-employee-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            full_name: document.getElementById('add-emp-fullname').value.trim(),
+            emp_id: document.getElementById('add-emp-id').value.trim(),
+            department: document.getElementById('add-emp-department').value.trim(),
+            role: document.getElementById('add-emp-role').value.trim(),
+            username: document.getElementById('add-emp-username').value.trim(),
+            password: document.getElementById('add-emp-password').value.trim(),
+            is_admin: document.getElementById('add-emp-account-role').value === 'ADMIN' ? 1 : 0,
+            status: document.getElementById('add-emp-status').value
+        };
 
-    initNavigation();
-    initFilters();
-    initModals();
-    initMemberAndTaskModals();
-    initSettingsTabs();
-    initSettingsSliders();
-    initSettingsActions();
-    initGlobalSearch();
-    loadSettingsFromStorage();
+        try {
+            await fetchAPI('/employees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-    loadDashboard();
-    setupRefreshTimer();
+            alert('Employee account successfully created.');
+            closeModal('add-employee-modal');
+            e.target.reset();
+            loadEmployees();
+            loadDashboard();
+        } catch (err) {
+            alert('Failed to create employee: ' + err.message);
+        }
+    });
+
+    // Edit Employee Form
+    document.getElementById('edit-employee-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = document.getElementById('edit-emp-user-id').value;
+        const payload = {
+            full_name: document.getElementById('edit-emp-fullname').value.trim(),
+            emp_id: document.getElementById('edit-emp-id').value.trim(),
+            department: document.getElementById('edit-emp-department').value.trim(),
+            role: document.getElementById('edit-emp-role').value.trim(),
+            status: document.getElementById('edit-emp-status').value
+        };
+
+        const newPass = document.getElementById('edit-emp-password').value.trim();
+        if (newPass) payload.password = newPass;
+
+        try {
+            await fetchAPI(`/employees/${userId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            alert('Employee record successfully updated.');
+            closeModal('edit-employee-modal');
+            loadEmployees();
+            loadDashboard();
+        } catch (err) {
+            alert('Failed to update employee: ' + err.message);
+        }
+    });
+
+    // Open Add Employee Modal Button
+    document.getElementById('open-add-employee-btn')?.addEventListener('click', () => {
+        openModal('add-employee-modal');
+    });
+
+    // Simulation Trigger
+    document.getElementById('run-simulation-btn')?.addEventListener('click', runSimulation);
+
+    // Target employee select change
+    document.getElementById('sim-target-employee')?.addEventListener('change', (e) => {
+        triggerEmployeeMetaUpdate(e.target.value);
+    });
+
+    // Generate Report Button
+    document.getElementById('generate-report-modal-btn')?.addEventListener('click', generateExecutiveReport);
+
+    // Filters Debounce
+    let debounceTimer;
+    const bindFilter = (id, fn) => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fn, 300);
+        });
+        document.getElementById(id)?.addEventListener('change', fn);
+    };
+
+    bindFilter('employee-search', loadEmployees);
+    bindFilter('employee-department-filter', loadEmployees);
+    bindFilter('employee-risk-filter', loadEmployees);
+    bindFilter('employee-status-filter', loadEmployees);
+
+    bindFilter('alerts-search', loadAlertsList);
+    bindFilter('alerts-severity-filter', loadAlertsList);
+    bindFilter('alerts-status-filter', loadAlertsList);
+
+    bindFilter('activity-search', loadActivityStream);
+    bindFilter('activity-status-filter', loadActivityStream);
+
+    // Global Search
+    document.getElementById('global-search')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const q = e.target.value.trim();
+            if (!q) return;
+            navigateToPage('employees');
+            const empSearch = document.getElementById('employee-search');
+            if (empSearch) {
+                empSearch.value = q;
+                loadEmployees();
+            }
+        }
+    });
+}
+
+// Modal Backdrop clicks
+document.querySelectorAll('.modal').forEach(m => {
+    m.addEventListener('click', (e) => {
+        if (e.target === m) closeModal(m.id);
+    });
 });
 
-// Expose handlers globally for inline events
+// ==========================================
+// BOOTSTRAP APPLICATION
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    initNavigation();
+    initForms();
+    loadDashboard();
+    refreshIcons();
+});
+
+// Global bindings for inline event triggers
+window.navigateToPage = navigateToPage;
+window.switchAlertSubTab = switchAlertSubTab;
+window.showEmployeeDetails = showEmployeeDetails;
+window.openEditEmployeeModal = openEditEmployeeModal;
+window.toggleEmployeeStatus = toggleEmployeeStatus;
 window.showIncidentDetail = showIncidentDetail;
-window.updateIncidentStatus = updateIncidentStatus;
-window.investigateIncident = investigateIncident;
-window.quarantineSubject = quarantineSubject;
-window.escalateIncident = escalateIncident;
-window.loadTasks = loadTasks;
+window.triggerAlertAction = triggerAlertAction;
+window.selectScenario = selectScenario;
+window.runSimulation = runSimulation;
+window.resetSimulator = resetSimulator;
+window.launchSimulationForEmployee = launchSimulationForEmployee;
+window.closeModal = closeModal;
+window.generateExecutiveReport = generateExecutiveReport;

@@ -14,6 +14,7 @@ def create_tables(conn):
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            emp_id TEXT,
             username TEXT NOT NULL UNIQUE,
             full_name TEXT NOT NULL,
             department TEXT NOT NULL,
@@ -25,6 +26,19 @@ def create_tables(conn):
             created_at TEXT DEFAULT (datetime('now')),
             password TEXT,
             is_admin INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS simulations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            scenario_type TEXT NOT NULL,
+            scenario_name TEXT NOT NULL,
+            risk_score INTEGER NOT NULL,
+            risk_level TEXT NOT NULL,
+            indicators TEXT,
+            alert_created INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS tasks (
@@ -156,7 +170,15 @@ def init_database():
 
     conn = sqlite3.connect(DB_PATH)
     create_tables(conn)
+    conn.close()
 
+    try:
+        from database.migrate import run_migration
+        run_migration()
+    except Exception as e:
+        print('Migration check note:', e)
+
+    conn = sqlite3.connect(DB_PATH)
     count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
     if count > 0:
         conn.close()
