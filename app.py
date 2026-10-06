@@ -6,69 +6,41 @@ import sys
 # Ensure project root is on the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, redirect, request
+from backend import config
 from backend.routes.api import api_bp
-from backend.services.data_service import verify_login, reset_password
+from backend.services.data_service import reset_password
+from backend.services import auth_service
 from database.init_db import init_database
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
-# Secret key for session management
-app.secret_key = 'threatsim-cherry-red-secret-key-2026'
 
-# Register API blueprint
+# Authentication does NOT use Flask's shared cookie session any more.
+# Each browser tab holds its own server-side session token (see auth_service),
+# which is what lets several users be signed in side by side.
+
 app.register_blueprint(api_bp, url_prefix='/api')
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.after_request
+def _page_headers(resp):
+    # Page shells never contain user data, but don't let a stale shell be reused after sign-out.
+    if resp.mimetype == 'text/html':
+        resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+@app.route('/login')
 def login():
-    """Sign-in page with dark cherry-red aesthetic and realistic security validation."""
-    # If already logged in, redirect based on role
-    if 'analyst' in session and 'user_id' in session:
-        if session.get('is_admin') == 1:
-            return redirect(url_for('index'))
-        else:
-            return redirect(url_for('member_dashboard'))
-
-    error = None
-    success = None
-    username_val = ''
-
-    if request.method == 'POST':
-        username_val = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        remember_me = bool(request.form.get('remember_me'))
-
-        if not username_val or not password:
-            error = 'Please enter both your username and password.'
-        else:
-            user = verify_login(username_val, password)
-            if user:
-                if user.get('is_disabled'):
-                    error = 'This account has been disabled by a security administrator.'
-                else:
-                    session.permanent = remember_me
-                    session['analyst'] = user['username']
-                    session['user_id'] = user['id']
-                    session['full_name'] = user['full_name']
-                    session['emp_id'] = user.get('emp_id') or f"EMP-{user['id']}"
-                    session['is_admin'] = user['is_admin']
-                    session['role'] = user['role']
-                    session['department'] = user['department']
-
-                    if user['is_admin'] == 1:
-                        return redirect(url_for('index'))
-                    else:
-                        return redirect(url_for('member_dashboard'))
-            else:
-                error = 'Invalid credentials. Please verify your username and password.'
-
-    return render_template('login.html', error=error, success=success, username_val=username_val)
+    """Sign-in page with separate Employee and Admin sections.
+    Sign-in itself is performed by POST /api/auth/login (see static/js/auth.js)."""
+    return render_template('login.html')
 
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password_page():
-    """Secure password recovery endpoint."""
+    """Password recovery for employee accounts (the fixed admin account has no recovery)."""
     error = None
     success = None
     if request.method == 'POST':
@@ -94,47 +66,41 @@ def forgot_password_page():
 
 @app.route('/logout')
 def logout():
-    """Clear session and return to authentication page."""
-    session.clear()
-    return redirect(url_for('login'))
+    """Signing out is done client-side (clears this tab's token and calls /api/auth/logout)."""
+    return render_template('logout.html')
 
 
 @app.route('/')
 def index():
-    """Main administrative ThreatSim dashboard – requires admin role."""
-    if 'analyst' not in session or 'user_id' not in session:
-        return redirect(url_for('login'))
-    if session.get('is_admin') != 1:
-        return redirect(url_for('member_dashboard'))
+    """Admin dashboard shell. The page verifies this tab's token before showing anything."""
     return render_template('index.html')
 
 
 @app.route('/member')
 def member_dashboard():
-    """Employee personal security portal – strictly scoped to individual employee."""
-    if 'analyst' not in session or 'user_id' not in session:
-        return redirect(url_for('login'))
-    if session.get('is_admin') == 1:
-        return redirect(url_for('index'))
-    return render_template(
-        'member.html',
-        username=session['analyst'],
-        full_name=session.get('full_name', session['analyst']),
-        emp_id=session.get('emp_id', 'EMP'),
-        role=session.get('role', 'Employee'),
-        department=session.get('department', 'General')
-    )
+    """Employee portal shell. The page verifies this tab's token before showing anything."""
+    return render_template('member.html')
 
 
 def main():
     init_database()
+    auth_service.init_session_table()
+    try:
+        import sqlite3
+        from backend.utils.db import DB_PATH
+        names = [r[0] for r in sqlite3.connect(DB_PATH).execute('SELECT username FROM users WHERE is_admin = 0')]
+        print(f'  Database in use : {DB_PATH}')
+        print(f'  Employee accounts: {", ".join(names) if names else "NONE - run: python restore_employees.py"}')
+    except Exception as e:
+        print('  Could not read employee list:', e)
     print('\n  ThreatSim Insider Threat Detection System')
     print('  =========================================')
     print('  Server running at http://127.0.0.1:5000')
-    print('  Default Admin Login: ryuu / ryuu12')
-    print('  Default Employee Login: aryan / aryan07')
+    print('  Admin sign-in:    use the "Admin" tab')
+    print('  Employee sign-in: use the "Employee" tab')
     print('  Press Ctrl+C to stop\n')
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    # threaded=True so several tabs/browsers are served concurrently
+    app.run(debug=True, host='127.0.0.1', port=5000, threaded=True)
 
 
 if __name__ == '__main__':
