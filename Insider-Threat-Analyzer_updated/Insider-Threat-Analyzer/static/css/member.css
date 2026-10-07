@@ -1,0 +1,9 @@
+/* Member / Employee Portal Styling – Dark Cherry-Red Cybersecurity Palette */
+
+.member-portal-hero {
+    background: linear-gradient(135deg, rgba(143, 24, 48, 0.15) 0%, rgba(22, 13, 16, 0.95) 100%);
+    border: 1px solid var(--border-cherry);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+}
