@@ -340,10 +340,12 @@ def get_threat_analysis():
 
         # Threats over time (activity risk by day, last 7 days)
         threats_timeline = conn.execute('''
-            SELECT DATE(timestamp) as day, AVG(risk_score) as avg_risk, COUNT(*) as count
+            SELECT DATE(CAST(timestamp AS TIMESTAMPTZ)) as day,
+                   AVG(risk_score) as avg_risk,
+                   COUNT(*) as count
             FROM activity_logs
-            WHERE timestamp >= datetime('now', '-7 days')
-            GROUP BY DATE(timestamp)
+            WHERE CAST(timestamp AS TIMESTAMPTZ) >= (CURRENT_TIMESTAMP - INTERVAL '7 days')
+            GROUP BY DATE(CAST(timestamp AS TIMESTAMPTZ))
             ORDER BY day
         ''').fetchall()
 
@@ -351,9 +353,11 @@ def get_threat_analysis():
             # Fallback to the latest 7 active days so the tracker is always live and on
             threats_timeline = conn.execute('''
                 SELECT day, avg_risk, count FROM (
-                    SELECT DATE(timestamp) as day, AVG(risk_score) as avg_risk, COUNT(*) as count
+                    SELECT DATE(CAST(timestamp AS TIMESTAMPTZ)) as day,
+                           AVG(risk_score) as avg_risk,
+                           COUNT(*) as count
                     FROM activity_logs
-                    GROUP BY DATE(timestamp)
+                    GROUP BY DATE(CAST(timestamp AS TIMESTAMPTZ))
                     ORDER BY day DESC
                     LIMIT 7
                 ) ORDER BY day ASC

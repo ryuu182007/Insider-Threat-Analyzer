@@ -184,12 +184,29 @@ function navigateToPage(page, subTab = null) {
 
 async function loadDashboard() {
     try {
-        const [stats, threatData, activities, recentAlerts] = await Promise.all([
+        // Load each dashboard panel independently.  One failed chart/API should
+        // not prevent KPI cards, alerts, or activity data from being displayed.
+        const results = await Promise.allSettled([
             fetchAPI('/dashboard'),
             fetchAPI('/threat-analysis'),
             fetchAPI('/activity?limit=6'),
             fetchAPI('/incidents')
         ]);
+
+        const [statsResult, threatResult, activitiesResult, alertsResult] = results;
+        const stats = statsResult.status === 'fulfilled' ? statsResult.value : {};
+        const threatData = threatResult.status === 'fulfilled' ? threatResult.value : {
+            risk_distribution: { low: 0, medium: 0, high: 0, critical: 0 },
+            threats_timeline: []
+        };
+        const activities = activitiesResult.status === 'fulfilled' ? activitiesResult.value : [];
+        const recentAlerts = alertsResult.status === 'fulfilled' ? alertsResult.value : [];
+
+        results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+                console.error('Dashboard API request failed:', index, result.reason);
+            }
+        });
 
         // 4 KPI Summary Cards
         document.getElementById('stat-total-employees').textContent = stats.total_employees ?? stats.total_users ?? 0;
