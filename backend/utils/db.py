@@ -13,6 +13,8 @@ import os
 import re
 import shutil
 import sqlite3
+from datetime import date, datetime, time
+from decimal import Decimal
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SOURCE_DB_PATH = os.path.join(BASE_DIR, "database", "insider_threat.db")
@@ -258,9 +260,27 @@ def get_db():
     return conn
 
 
+def _json_safe(value):
+    """Convert PostgreSQL values to JSON-safe Python values.
+
+    SQLite returns DATE/AVG-style values in forms Flask can serialize, while
+    psycopg2 may return datetime/date/Decimal objects.  The frontend consumes
+    these API responses as JSON, so normalize them at the database boundary.
+    """
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
+
+
 def dict_from_row(row):
     if row is None:
         return None
     if isinstance(row, dict):
-        return dict(row)
-    return dict(row)
+        return _json_safe(dict(row))
+    return _json_safe(dict(row))
