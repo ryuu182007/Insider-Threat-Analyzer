@@ -144,6 +144,12 @@ def _qmark_to_pyformat(sql):
 
 
 def _sqlite_datetime_to_postgres(sql):
+    # Translate the SQLite datetime() forms used by the application to
+    # PostgreSQL equivalents.  The simple datetime('now') form is handled
+    # first; the modifier form is needed by the threat-analysis timeline.
+    sql = re.sub(r"datetime\('now',\s*'-(\d+)\s+days'\)",
+                 lambda m: f"(CURRENT_TIMESTAMP - INTERVAL '{m.group(1)} days')",
+                 sql, flags=re.IGNORECASE)
     return re.sub(r"datetime\('now'\)", "CURRENT_TIMESTAMP", sql, flags=re.IGNORECASE)
 
 
