@@ -1,14 +1,13 @@
-"""SQLite connection helper with Vercel/serverless-safe database handling.
+"""SQLite database connection helper for local and Vercel deployments.
 
-Locally the application keeps using database/insider_threat.db.
-On Vercel, the deployed source tree is not a persistent writable filesystem,
-so the bundled seed database is copied once per warm serverless instance to
-/tmp and all reads/writes use that writable copy.
+Vercel's deployed application directory is not writable.  SQLite needs a
+writable directory for journal/WAL files, so on Vercel we copy the committed
+seed database to /tmp and use that copy for the lifetime of the serverless
+instance.
 
-IMPORTANT: /tmp is ephemeral. This makes the demo/application work on Vercel,
-but database changes are not a permanent production datastore. For a
-multi-instance production deployment, move persistent data to PostgreSQL or
-another hosted database.
+This keeps the existing SQLite-based application working without changing the
+rest of the code.  /tmp is ephemeral, so this is appropriate for a demo but
+is not a permanent production database.
 """
 
 import os
@@ -16,66 +15,84 @@ import shutil
 import sqlite3
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SOURCE_DB_PATH = os.path.join(BASE_DIR, 'database', 'insider_threat.db')
+SOURCE_DB_PATH = os.path.join(BASE_DIR, "database", "insider_threat.db")
 
-# Vercel sets VERCEL=1. The Lambda variable is included as a fallback for
-# other serverless deployments.
-_IS_SERVERLESS = (
-    os.environ.get('VERCEL') == '1'
-    or bool(os.environ.get('AWS_LAMBDA_FUNCTION_VERSION'))
-)
+# Do not rely only on VERCEL=1: the fallback below also works if the runtime
+# environment does not expose that variable during a particular invocation.
+_RUNTIME_TMP = os.path.join("/tmp", "threatsim-insider-threat.db")
+_IS_VERCEL = os.environ.get("VERCEL") == "1"
 
-if _IS_SERVERLESS:
-    DB_PATH = os.path.join('/tmp', 'insider_threat.db')
-else:
-    DB_PATH = SOURCE_DB_PATH
+# Public name kept for compatibility with the rest of the project/tests.
+DB_PATH = _RUNTIME_TMP if _IS_VERCEL else SOURCE_DB_PATH
 
 _initialized = False
 
 
-def _ensure_database():
-    """Ensure DB_PATH exists and is writable before sqlite3.connect()."""
-    global _initialized
-    if _initialized and os.path.exists(DB_PATH):
+def _source_is_readable():
+    return os.path.isfile(SOURCE_DB_PATH) and os.access(SOURCE_DB_PATH, os.R_OK)
+
+
+def _prepare_runtime_database():
+    """Select a writable SQLite path and create/copy the DB if necessary."""
+    global DB_PATH, _initialized
+
+    if _initialized and os.path.isfile(DB_PATH):
         return
 
-    if _IS_SERVERLESS:
-        os.makedirs('/tmp', exist_ok=True)
-        if not os.path.exists(DB_PATH):
-            # The repository contains the working employee database. Copy it
-            # to Vercel's writable temporary filesystem for this instance.
-            if os.path.exists(SOURCE_DB_PATH):
-                shutil.copy2(SOURCE_DB_PATH, DB_PATH)
-            else:
-                # Fallback for a deployment where the database file was not
-                # committed: create the schema in /tmp.
-                from database.init_db import create_tables
-                conn = sqlite3.connect(DB_PATH)
-                try:
-                    create_tables(conn)
-                    conn.commit()
-                finally:
-                    conn.close()
+    # Vercel/serverless: always use /tmp.  It is the writable filesystem area.
+    if _IS_VERCEL:
+        DB_PATH = _RUNTIME_TMP
     else:
-        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        # Local development keeps the repository DB.  If the application is
+        # unexpectedly running from a read-only deployment directory, fall
+        # back to /tmp instead of crashing.
+        try:
+            os.makedirs(os.path.dirname(SOURCE_DB_PATH), exist_ok=True)
+            test_path = SOURCE_DB_PATH + ".write-test"
+            with open(test_path, "ab"):
+                pass
+            os.remove(test_path)
+            DB_PATH = SOURCE_DB_PATH
+        except (OSError, PermissionError):
+            DB_PATH = _RUNTIME_TMP
 
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+    if not os.path.exists(DB_PATH):
+        if _source_is_readable() and os.path.abspath(SOURCE_DB_PATH) != os.path.abspath(DB_PATH):
+            shutil.copyfile(SOURCE_DB_PATH, DB_PATH)
+        elif os.path.abspath(SOURCE_DB_PATH) == os.path.abspath(DB_PATH):
+            # Let sqlite create the file; schema initialization is handled by
+            # database.init_db when running the app locally.
+            pass
+        else:
+            # If a deployment omitted the binary seed database, create the
+            # schema in the writable runtime location.
+            from database.init_db import create_tables
+            conn = sqlite3.connect(DB_PATH)
+            try:
+                create_tables(conn)
+                conn.commit()
+            finally:
+                conn.close()
+
+    # Verify that SQLite can actually open the selected file before marking it
+    # ready.  This catches bad paths/permissions early.
+    conn = sqlite3.connect(DB_PATH, timeout=15)
+    conn.close()
     _initialized = True
 
 
 def get_db():
-    """Return a database connection with row factory enabled.
-
-    A generous busy timeout plus WAL mode lets several users (several tabs /
-    browsers) read and write at the same time without "database is locked"
-    errors. WAL is safe here because the serverless copy is in /tmp.
-    """
-    _ensure_database()
+    """Return a SQLite connection with row access enabled."""
+    _prepare_runtime_database()
     conn = sqlite3.connect(DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA foreign_keys = ON')
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
-        conn.execute('PRAGMA journal_mode = WAL')
+        conn.execute("PRAGMA journal_mode = WAL")
     except sqlite3.DatabaseError:
+        # WAL is an optimization, not a requirement for the application.
         pass
     return conn
 

@@ -1,10 +1,12 @@
-# Vercel database note
+# Vercel SQLite fix
 
-The application uses SQLite. On Vercel, `backend/utils/db.py` copies the bundled
-`database/insider_threat.db` into `/tmp/insider_threat.db` and uses that writable
-copy for the lifetime of a serverless instance. This fixes the `sqlite3.OperationalError:
-unable to open database file` error caused by trying to write to the deployed source tree.
+`backend/utils/db.py` detects Vercel and copies the committed
+`database/insider_threat.db` to `/tmp/threatsim-insider-threat.db`, because the
+Vercel deployment directory is not writable by SQLite.
 
-The `/tmp` database is ephemeral and is not a permanent production database. For a
-multi-instance production deployment, migrate persistent data to a hosted PostgreSQL
-(or other server database) service.
+The rest of the application continues to use the same `get_db()` function.
+This preserves the existing employee accounts in the bundled database.
+
+Important: `/tmp` is temporary serverless storage. Data written after deploy
+is not a permanent production datastore. For a real multi-instance deployment,
+move the database to PostgreSQL or another hosted database.
