@@ -63,7 +63,7 @@ def get_dashboard_stats():
             'suspicious_users': suspicious_users,
             'open_incidents': open_incidents,
             'active_alerts': open_incidents,
-            'avg_risk_score': round(avg_risk, 1),
+            'avg_risk_score': round(float(avg_risk), 1),
             'critical_incidents': critical_incidents,
             'high_risk_users': high_risk_users,
             'high_risk_employees': high_risk_employees,
@@ -431,7 +431,7 @@ def get_daily_subject_tracker(department=None):
 
         return {
             'total_subjects': total_subjects,
-            'avg_risk': round(avg_risk, 1),
+            'avg_risk': round(float(avg_risk), 1),
             'high_risk': high_risk,
             'daily_anomalies': daily_anomalies,
             'tracker_status': 'ACTIVE',

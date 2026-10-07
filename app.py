@@ -11,6 +11,7 @@ from backend import config
 from backend.routes.api import api_bp
 from backend.services.data_service import reset_password
 from backend.services import auth_service
+from backend.utils.db import USE_POSTGRES
 from database.init_db import init_database
 
 app = Flask(__name__)
@@ -83,7 +84,8 @@ def member_dashboard():
 
 
 def main():
-    init_database()
+    if not USE_POSTGRES:
+        init_database()
     auth_service.init_session_table()
     try:
         import sqlite3
