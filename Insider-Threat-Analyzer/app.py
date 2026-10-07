@@ -85,6 +85,14 @@ def member_dashboard():
 def main():
     init_database()
     auth_service.init_session_table()
+    try:
+        import sqlite3
+        from backend.utils.db import DB_PATH
+        names = [r[0] for r in sqlite3.connect(DB_PATH).execute('SELECT username FROM users WHERE is_admin = 0')]
+        print(f'  Database in use : {DB_PATH}')
+        print(f'  Employee accounts: {", ".join(names) if names else "NONE - run: python restore_employees.py"}')
+    except Exception as e:
+        print('  Could not read employee list:', e)
     print('\n  ThreatSim Insider Threat Detection System')
     print('  =========================================')
     print('  Server running at http://127.0.0.1:5000')

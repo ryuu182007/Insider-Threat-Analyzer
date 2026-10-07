@@ -393,3 +393,98 @@ body::before {
 .portal-tab:hover { color: var(--text-primary, #fff); }
 .portal-tab.active { background: var(--cherry-main, #8f1830); color: #fff; }
 .portal-hint { font-size: 0.8rem; color: var(--text-muted, #a9959a); }
+
+/* ==========================================================================
+   Light / dark theme + ASCII fluid hero (cherry red palette preserved)
+   ========================================================================== */
+:root[data-theme="light"] {
+    --bg-base: #F7F3F5;
+    --bg-card: #FFFFFF;
+    --bg-input: #FFFFFF;
+    --cherry-main: #8F1830;
+    --cherry-accent: #B5223E;
+    --cherry-hover: #731124;
+    --cherry-dim: rgba(143, 24, 48, 0.08);
+    --cherry-glow: rgba(181, 34, 62, 0.15);
+    --text-primary: #1C0F13;
+    --text-secondary: #4A343B;
+    --text-muted: #786268;
+    --border-color: #EBDCE0;
+    --border-highlight: #D9BCC3;
+    --danger-bg: rgba(181, 34, 62, 0.10);
+}
+
+html { background-color: var(--bg-base); }
+body { transition: background-color .25s ease, color .25s ease; }
+
+/* Hero canvas sits behind everything */
+.hero-fluid {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.hero-fluid canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* Soft fade toward the page colour so the form area stays calm and readable */
+.hero-vignette {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 55% 60% at 50% 50%, var(--bg-base) 0%, transparent 78%),
+        linear-gradient(to bottom, var(--bg-base) 0%, transparent 18%, transparent 82%, var(--bg-base) 100%);
+    opacity: 0.62;
+}
+body::before { z-index: 1; }
+
+/* Card stays solid + readable over the hero */
+.auth-card { backdrop-filter: blur(6px); }
+:root[data-theme="light"] .auth-card {
+    box-shadow: 0 12px 40px rgba(143, 24, 48, 0.12), 0 0 0 1px rgba(143, 24, 48, 0.04);
+}
+:root[data-theme="light"] body::before {
+    background: radial-gradient(circle, rgba(143, 24, 48, 0.07) 0%, transparent 70%);
+}
+:root[data-theme="light"] .form-input { color: var(--text-primary); }
+:root[data-theme="light"] .btn-submit { color: #fff; }
+
+/* Nav: console label + theme toggle */
+.nav-right { display: flex; align-items: center; gap: 14px; }
+.nav-console { font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono); }
+.theme-btn {
+    width: 38px; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    border: 1px solid var(--border-highlight);
+    background: var(--bg-card);
+    color: var(--cherry-hover);
+    cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s, transform .15s;
+}
+.theme-btn:hover { border-color: var(--cherry-accent); color: var(--cherry-accent); transform: translateY(-1px); }
+.theme-btn:focus-visible { outline: 2px solid var(--cherry-accent); outline-offset: 2px; }
+.theme-btn .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-btn .icon-moon { display: none; }
+:root[data-theme="dark"] .theme-btn .icon-sun { display: block; }
+:root[data-theme="light"] .theme-btn { color: var(--cherry-main); }
+
+/* Hero tagline */
+.hero-copy {
+    position: fixed;
+    left: 40px; bottom: 36px;
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+}
+.hero-kicker { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 3px; color: var(--cherry-accent); }
+.hero-line { font-size: clamp(1.3rem, 2.2vw, 2rem); font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+.hero-line em { font-style: normal; color: var(--cherry-accent); }
+@media (min-width: 1100px) { .hero-copy { display: flex; } }
+
+@media (max-width: 520px) { .nav-console { display: none; } }
+@media (prefers-reduced-motion: reduce) { body, .theme-btn { transition: none; } }
+:root[data-theme="light"] .portal-tabs { background: rgba(143, 24, 48, 0.06); border-color: var(--border-color); }
+:root[data-theme="light"] .portal-tab { color: var(--text-secondary); }
+:root[data-theme="light"] .portal-tab.active { color: #fff; }
