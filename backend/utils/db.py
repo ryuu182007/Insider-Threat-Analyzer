@@ -206,7 +206,10 @@ class _PGConnection:
         # The application reads cursor.lastrowid after these inserts. PostgreSQL
         # has no lastrowid, so return the generated id transparently.
         if stripped.startswith("INSERT INTO") and "RETURNING" not in stripped:
-            table_match = re.match(r"INSERT\s+INTO\s+([A-Za-z_][A-Za-z0-9_]*)", sql, re.I)
+            # sql.lstrip(): multi-line (triple-quoted) INSERTs start with
+            # whitespace/newlines, which previously made this match fail, so
+            # RETURNING id was never added and cursor.lastrowid stayed None.
+            table_match = re.match(r"\s*INSERT\s+INTO\s+([A-Za-z_][A-Za-z0-9_]*)", sql, re.I)
             if table_match and table_match.group(1).lower() in {"users", "tasks", "incidents", "simulations"}:
                 sql = sql.rstrip().rstrip(";") + " RETURNING id"
         cur = self._raw.cursor()

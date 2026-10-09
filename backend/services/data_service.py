@@ -477,6 +477,13 @@ def create_employee(data, source='admin'):
         ''', (emp_id, username, data['full_name'].strip(), data['department'].strip(),
               data['role'].strip(), email, generate_password_hash(data['password']), status))
         user_id = cursor.lastrowid
+        if not user_id:
+            # Safety net: never write a log row with a NULL user_id.
+            row = conn.execute('SELECT id FROM users WHERE LOWER(username) = LOWER(?)', (username,)).fetchone()
+            user_id = row['id'] if row else None
+        if not user_id:
+            conn.rollback()
+            return None, 'Could not create the account. Please try again.'
         desc = 'Employee account created via self-registration' if source == 'self' else 'Employee account created by administrator'
         device = 'Web Terminal' if source == 'self' else 'Admin Console'
         conn.execute('''
@@ -486,7 +493,14 @@ def create_employee(data, source='admin'):
         conn.commit()
         return user_id, None
     except Exception as e:
-        return None, str(e)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        # Keep database internals (table/column names) out of the user-facing message.
+        import logging
+        logging.getLogger(__name__).exception('create_employee failed')
+        return None, 'Could not create the account. Please try again or contact an administrator.'
     finally:
         conn.close()
 
