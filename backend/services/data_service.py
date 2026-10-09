@@ -445,7 +445,7 @@ def get_daily_subject_tracker(department=None):
         conn.close()
 
 
-def create_employee(data):
+def create_employee(data, source='admin'):
     """Create a new EMPLOYEE account (always non-admin; the admin is a fixed built-in account)."""
     conn = get_db()
     try:
@@ -465,7 +465,7 @@ def create_employee(data):
         if not emp_id:
             max_id = conn.execute('SELECT MAX(id) as m FROM users').fetchone()['m'] or 0
             emp_id = f"EMP-{1001 + max_id}"
-        if conn.execute('SELECT id FROM users WHERE emp_id = ?', (emp_id,)).fetchone():
+        if conn.execute('SELECT id FROM users WHERE LOWER(emp_id) = LOWER(?)', (emp_id,)).fetchone():
             return None, f"Employee ID '{emp_id}' is already assigned."
 
         email = str(data.get('email') or '').strip() or f"{username.lower()}@corp.local"
@@ -477,10 +477,12 @@ def create_employee(data):
         ''', (emp_id, username, data['full_name'].strip(), data['department'].strip(),
               data['role'].strip(), email, generate_password_hash(data['password']), status))
         user_id = cursor.lastrowid
+        desc = 'Employee account created via self-registration' if source == 'self' else 'Employee account created by administrator'
+        device = 'Web Terminal' if source == 'self' else 'Admin Console'
         conn.execute('''
             INSERT INTO activity_logs (user_id, activity_type, description, ip_address, device, timestamp, risk_score, status)
-            VALUES (?, 'profile_created', 'Employee account created by administrator', '127.0.0.1', 'Admin Console', datetime('now'), 0, 'normal')
-        ''', (user_id,))
+            VALUES (?, 'profile_created', ?, '127.0.0.1', ?, datetime('now'), 0, 'normal')
+        ''', (user_id, desc, device))
         conn.commit()
         return user_id, None
     except Exception as e:

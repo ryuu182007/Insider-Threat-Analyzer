@@ -19,6 +19,7 @@ _tmpdir = tempfile.mkdtemp()
 _tmpdb = os.path.join(_tmpdir, 'test.db')
 shutil.copy(dbmod.DB_PATH, _tmpdb)
 dbmod.DB_PATH = _tmpdb            # every get_db() call now uses the copy
+dbmod._initialized = True
 
 from database import migrate
 migrate.DB_PATH = _tmpdb
@@ -127,6 +128,188 @@ class AuthTests(unittest.TestCase):
         uid = b['user']['user_id']
         self.c.put(f'/api/employees/{uid}/status', json={'status': 'disabled'}, headers=H(adm['token']))
         self.assertEqual(self.c.get('/api/auth/me', headers=H(b['token'])).status_code, 401)
+
+    def register(self, data):
+        return self.c.post('/api/auth/register', json=data)
+
+    def test_09_employee_self_signup_success(self):
+        auth_service.reset_signup_rate_limits()
+        reg_data = {
+            'full_name': 'Alex Mercer',
+            'emp_id': 'EMP-777',
+            'username': 'alex_m',
+            'department': 'SecOps',
+            'role': 'Incident Handler',
+            'password': 'Password-Alex777',
+            'confirm_password': 'Password-Alex777'
+        }
+        res = self.register(reg_data)
+        self.assertEqual(res.status_code, 201)
+        data = res.get_json()
+        self.assertEqual(data.get('username'), 'alex_m')
+        self.assertIn('message', data)
+        self.assertNotIn('token', data)  # Do NOT auto-login
+
+    def test_10_signup_duplicate_username(self):
+        dup = {
+            'full_name': 'Another Alex',
+            'emp_id': 'EMP-888',
+            'username': 'ALEX_M',  # case-insensitive duplicate check
+            'department': 'IT',
+            'role': 'Support',
+            'password': 'Password-Alex777',
+            'confirm_password': 'Password-Alex777'
+        }
+        res = self.register(dup)
+        self.assertEqual(res.status_code, 400)
+
+    def test_11_signup_duplicate_employee_id(self):
+        dup = {
+            'full_name': 'Duplicate ID Person',
+            'emp_id': 'EMP-777',
+            'username': 'unique_user_id1',
+            'department': 'IT',
+            'role': 'Support',
+            'password': 'Password-12345',
+            'confirm_password': 'Password-12345'
+        }
+        res = self.register(dup)
+        self.assertEqual(res.status_code, 400)
+        # Case-insensitive employee ID check
+        dup['emp_id'] = 'emp-777'
+        dup['username'] = 'unique_user_id2'
+        res = self.register(dup)
+        self.assertEqual(res.status_code, 400)
+
+    def test_12_signup_reserved_username_ryuu(self):
+        for reserved in ('Ryuu', 'ryuu', 'RYUU', 'rYuu'):
+            res = self.register({
+                'full_name': 'Fake Admin',
+                'emp_id': f'EMP-RSV-{reserved}',
+                'username': reserved,
+                'department': 'IT',
+                'role': 'Support',
+                'password': 'Password-12345',
+                'confirm_password': 'Password-12345'
+            })
+            self.assertEqual(res.status_code, 400)
+            self.assertIn('reserved', res.get_json().get('error', '').lower())
+
+    def test_13_signup_password_validation(self):
+        base = {
+            'full_name': 'Pass Test',
+            'emp_id': 'EMP-PW',
+            'username': 'pw_tester',
+            'department': 'QA',
+            'role': 'Tester',
+        }
+        # Short password (< 8 chars)
+        res_short = self.register(dict(base, password='Short1!', confirm_password='Short1!'))
+        self.assertEqual(res_short.status_code, 400)
+        self.assertIn('8 characters', res_short.get_json().get('error', ''))
+
+        # Password mismatch
+        res_mismatch = self.register(dict(base, password='Password-Valid1', confirm_password='Password-Mismatch2'))
+        self.assertEqual(res_mismatch.status_code, 400)
+        self.assertIn('match', res_mismatch.get_json().get('error', '').lower())
+
+    def test_14_signup_username_and_fields_validation(self):
+        base = {
+            'full_name': 'User Test',
+            'emp_id': 'EMP-USR',
+            'department': 'QA',
+            'role': 'Tester',
+            'password': 'Password-Valid1',
+            'confirm_password': 'Password-Valid1'
+        }
+        # Too short (< 3 chars)
+        self.assertEqual(self.register(dict(base, username='ab')).status_code, 400)
+        # Invalid characters (spaces, symbols)
+        self.assertEqual(self.register(dict(base, username='bad user!')).status_code, 400)
+        # Missing required field
+        self.assertEqual(self.register(dict(base, username='valid_user', full_name='')).status_code, 400)
+
+    def test_15_signup_attempt_as_admin_ignored(self):
+        auth_service.reset_signup_rate_limits()
+        admin_attempt = {
+            'full_name': 'Sneaky Employee',
+            'emp_id': 'EMP-ADM-ATTEMPT',
+            'username': 'sneaky_emp',
+            'department': 'Security',
+            'role': 'Admin',
+            'is_admin': 1,
+            'password': 'Password-Sneaky1',
+            'confirm_password': 'Password-Sneaky1'
+        }
+        res = self.register(admin_attempt)
+        self.assertEqual(res.status_code, 201)
+        # Verify in database: is_admin MUST be 0
+        conn = sqlite3.connect(_tmpdb)
+        row = conn.execute("SELECT is_admin, password FROM users WHERE username = 'sneaky_emp'").fetchone()
+        conn.close()
+        self.assertIsNotNone(row)
+        self.assertEqual(row[0], 0)
+        self.assertTrue(row[1].startswith(('scrypt:', 'pbkdf2:')))  # password hashed, never plain text
+        # Cannot log in via admin portal
+        self.assertEqual(self.login('admin', 'sneaky_emp', 'Password-Sneaky1')[0], 401)
+
+    def test_16_new_account_login_from_employee_tab(self):
+        # alex_m from test_09 can log in via Employee tab
+        code, login_data = self.login('employee', 'alex_m', 'Password-Alex777')
+        self.assertEqual(code, 200)
+        self.assertIn('token', login_data)
+        self.assertEqual(login_data['redirect'], '/member')
+        # Token works for /api/auth/me
+        me = self.c.get('/api/auth/me', headers=H(login_data['token'])).get_json()
+        self.assertEqual(me['username'], 'alex_m')
+        self.assertEqual(me['name'], 'Alex Mercer')
+        self.assertEqual(me['id'], 'EMP-777')
+        self.assertEqual(me['role_type'], 'employee')
+        # Cannot log in via Admin tab
+        self.assertEqual(self.login('admin', 'alex_m', 'Password-Alex777')[0], 401)
+
+    def test_17_new_account_in_admin_employee_list(self):
+        _, adm = self.login('admin', 'Ryuu', 'Ryuu12')
+        users_res = self.c.get('/api/users', headers=H(adm['token']))
+        self.assertEqual(users_res.status_code, 200)
+        users = users_res.get_json()
+        usernames = [u['username'] for u in users]
+        self.assertIn('alex_m', usernames)
+        # Admin can edit or disable or remove the new employee
+        alex_row = next(u for u in users if u['username'] == 'alex_m')
+        alex_id = alex_row['id']
+        up_res = self.c.put(f'/api/employees/{alex_id}', json={'department': 'SOC Alpha'}, headers=H(adm['token']))
+        self.assertEqual(up_res.status_code, 200)
+        dis_res = self.c.put(f'/api/employees/{alex_id}/status', json={'status': 'disabled'}, headers=H(adm['token']))
+        self.assertEqual(dis_res.status_code, 200)
+        # Disabled user cannot log in
+        self.assertEqual(self.login('employee', 'alex_m', 'Password-Alex777')[0], 403)
+
+    def test_18_rate_limiting_abuse_protection(self):
+        auth_service.reset_signup_rate_limits()
+        for i in range(5):
+            r = self.register({
+                'full_name': f'Spam User {i}',
+                'emp_id': f'EMP-SPAM-{i}',
+                'username': f'spam_user_{i}',
+                'department': 'Testing',
+                'role': 'Bot',
+                'password': 'Password-Spam123',
+                'confirm_password': 'Password-Spam123'
+            })
+            self.assertEqual(r.status_code, 201)
+        r_blocked = self.register({
+            'full_name': 'Spam User 6',
+            'emp_id': 'EMP-SPAM-6',
+            'username': 'spam_user_6',
+            'department': 'Testing',
+            'role': 'Bot',
+            'password': 'Password-Spam123',
+            'confirm_password': 'Password-Spam123'
+        })
+        self.assertEqual(r_blocked.status_code, 429)
+        self.assertIn('Too many sign-up attempts', r_blocked.get_json().get('error', ''))
+        auth_service.reset_signup_rate_limits()
 
 
 if __name__ == '__main__':

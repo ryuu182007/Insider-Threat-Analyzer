@@ -309,3 +309,33 @@ def resolve_session(token):
         return identity
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting for public registration (abuse protection)
+# ---------------------------------------------------------------------------
+
+_SIGNUP_HISTORY = {}
+
+
+def check_signup_rate_limit(ip_address, limit=5, window_seconds=3600):
+    """Simple in-memory per-IP rate limiter (e.g. max 5 sign-ups per hour)."""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=window_seconds)
+    history = [ts for ts in _SIGNUP_HISTORY.get(ip_address, []) if ts > cutoff]
+    _SIGNUP_HISTORY[ip_address] = history
+    if len(history) >= limit:
+        return False, 'Too many sign-up attempts from this IP address. Please try again later.'
+    return True, None
+
+
+def record_signup_attempt(ip_address):
+    now = datetime.now(timezone.utc)
+    if ip_address not in _SIGNUP_HISTORY:
+        _SIGNUP_HISTORY[ip_address] = []
+    _SIGNUP_HISTORY[ip_address].append(now)
+
+
+def reset_signup_rate_limits():
+    _SIGNUP_HISTORY.clear()
+

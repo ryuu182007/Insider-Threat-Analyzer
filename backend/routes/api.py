@@ -1,5 +1,6 @@
 """Flask API routes for the ThreatSim Cybersecurity System with strict RBAC enforcement."""
 
+import re
 from functools import wraps
 from flask import Blueprint, jsonify, request, g
 from backend import config
@@ -116,6 +117,79 @@ def auth_login():
 
     identity = auth_service.resolve_session(token)
     return jsonify({'token': token, 'redirect': redirect_to, 'user': public_identity(identity)})
+
+
+@api_bp.route('/auth/register', methods=['POST'])
+def auth_register():
+    """Public employee self-registration endpoint."""
+    # Abuse protection: per-IP rate limit (max 5 sign-ups per hour)
+    client_ip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '127.0.0.1').split(',')[0].strip()
+    allowed, rate_msg = auth_service.check_signup_rate_limit(client_ip)
+    if not allowed:
+        return jsonify({'error': rate_msg}), 429
+
+    data = request.get_json(silent=True) or {}
+
+    # Required form fields in order:
+    # Full Name, Employee ID, Username, Department, Role / Job Title, Password, Confirm Password
+    field_specs = [
+        ('full_name', 'Full Name'),
+        ('emp_id', 'Employee ID'),
+        ('username', 'Username'),
+        ('department', 'Department'),
+        ('role', 'Role / Job Title'),
+        ('password', 'Password'),
+        ('confirm_password', 'Confirm Password'),
+    ]
+    for key, label in field_specs:
+        val = data.get(key)
+        if val is None or not str(val).strip():
+            return jsonify({'error': f'{label} is required.'}), 400
+
+    full_name = str(data['full_name']).strip()
+    emp_id = str(data['emp_id']).strip()
+    username = str(data['username']).strip()
+    department = str(data['department']).strip()
+    role = str(data['role']).strip()
+    password = str(data['password'])
+    confirm_password = str(data['confirm_password'])
+
+    # Password validation: minimum 8 characters and matching confirmation
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters long.'}), 400
+    if password != confirm_password:
+        return jsonify({'error': 'Passwords do not match.'}), 400
+
+    # Username validation: 3-30 chars, letters, numbers, . _ -
+    if not re.match(r'^[a-zA-Z0-9._-]{3,30}$', username):
+        return jsonify({'error': 'Username must be 3-30 characters long and can only contain letters, numbers, dots, underscores, and hyphens.'}), 400
+
+    # Reserved admin username check (reject Ryuu in any casing)
+    if username.lower() == 'ryuu' or username.lower() == config.ADMIN_USERNAME.lower():
+        return jsonify({'error': 'The username "Ryuu" is reserved.'}), 400
+
+    # ALWAYS create a normal employee (is_admin = 0), ignore any role/admin field sent from client
+    payload = {
+        'full_name': full_name,
+        'emp_id': emp_id,
+        'username': username,
+        'department': department,
+        'role': role,
+        'password': password,
+        'is_admin': 0,
+    }
+    user_id, error = data_service.create_employee(payload, source='self')
+    if error:
+        return jsonify({'error': error}), 400
+
+    # Record sign-up for rate limiting
+    auth_service.record_signup_attempt(client_ip)
+
+    # Success: 201 with friendly message, NO auto-login
+    return jsonify({
+        'message': 'Account created, please sign in',
+        'username': username
+    }), 201
 
 
 @api_bp.route('/auth/me')

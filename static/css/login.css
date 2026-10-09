@@ -103,6 +103,7 @@ body::before {
     max-width: 440px;
     position: relative;
     z-index: 10;
+    margin: auto 0;
 }
 
 .auth-card {
@@ -393,6 +394,17 @@ body::before {
 .portal-tab:hover { color: var(--text-primary, #fff); }
 .portal-tab.active { background: var(--cherry-main, #8f1830); color: #fff; }
 .portal-hint { font-size: 0.8rem; color: var(--text-muted, #a9959a); }
+
+.auth-signup-wrap {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
 
 /* ==========================================================================
    Light / dark theme + ASCII fluid hero (cherry red palette preserved)

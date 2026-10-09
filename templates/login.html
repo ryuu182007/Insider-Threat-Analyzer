@@ -154,8 +154,8 @@
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                     </svg>
                 </div>
-                <h1 class="auth-title">ThreatSim Security Console</h1>
-                <p class="auth-subtitle">Sign in with your organization credentials to access the SOC terminal</p>
+                <h1 class="auth-title" id="authTitle">ThreatSim Security Console</h1>
+                <p class="auth-subtitle" id="authSubtitle">Sign in with your organization credentials to access the SOC terminal</p>
             </div>
 
             {% if error %}
@@ -179,12 +179,25 @@
             </div>
             {% endif %}
 
+            <div class="alert alert-success" role="alert" id="loginSuccess" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <span id="loginSuccessText"></span>
+            </div>
+
             <div class="alert alert-error" role="alert" id="loginError" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
                 <span id="loginErrorText"></span>
             </div>
 
             <!-- Separate sign-in sections -->
-            <div class="portal-tabs" role="tablist" aria-label="Sign-in type">
+            <div class="portal-tabs" id="portalTabs" role="tablist" aria-label="Sign-in type">
                 <button type="button" class="portal-tab active" role="tab" id="tab-employee" data-portal="employee" aria-selected="true">Employee</button>
                 <button type="button" class="portal-tab" role="tab" id="tab-admin" data-portal="admin" aria-selected="false">Admin</button>
             </div>
@@ -233,6 +246,144 @@
                         <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                 </button>
+
+                <div class="auth-signup-wrap" id="signupPromptWrap">
+                    <span>New employee?</span>
+                    <a href="#" class="auth-link" id="goToRegisterLink">Create an account</a>
+                </div>
+            </form>
+
+            <form id="registerForm" style="display:none;" novalidate>
+                <div class="alert alert-error" role="alert" id="regError" style="display:none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span id="regErrorText"></span>
+                </div>
+
+                <!-- 1. Full Name -->
+                <div class="form-group">
+                    <label for="reg_full_name" class="form-label">Full Name</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </span>
+                        <input type="text" id="reg_full_name" name="full_name" class="form-input" placeholder="e.g. Jane Doe" required autocomplete="name">
+                    </div>
+                </div>
+
+                <!-- 2. Employee ID -->
+                <div class="form-group">
+                    <label for="reg_emp_id" class="form-label">Employee ID</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                                <line x1="7" y1="8" x2="11" y2="8"></line>
+                                <line x1="7" y1="12" x2="17" y2="12"></line>
+                            </svg>
+                        </span>
+                        <input type="text" id="reg_emp_id" name="emp_id" class="form-input" placeholder="e.g. EMP-1042" required>
+                    </div>
+                </div>
+
+                <!-- 3. Username -->
+                <div class="form-group">
+                    <label for="reg_username" class="form-label">Username</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
+                            </svg>
+                        </span>
+                        <input type="text" id="reg_username" name="username" class="form-input" placeholder="3-30 chars (letters, numbers, . _ -)" required autocomplete="username">
+                    </div>
+                </div>
+
+                <!-- 4. Department -->
+                <div class="form-group">
+                    <label for="reg_department" class="form-label">Department</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                            </svg>
+                        </span>
+                        <input type="text" id="reg_department" name="department" class="form-input" placeholder="e.g. Engineering, Finance, HR" required>
+                    </div>
+                </div>
+
+                <!-- 5. Role / Job Title -->
+                <div class="form-group">
+                    <label for="reg_role" class="form-label">Role / Job Title</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                            </svg>
+                        </span>
+                        <input type="text" id="reg_role" name="role" class="form-input" placeholder="e.g. Security Analyst" required>
+                    </div>
+                </div>
+
+                <!-- 6. Password -->
+                <div class="form-group">
+                    <label for="reg_password" class="form-label">Password</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </span>
+                        <input type="password" id="reg_password" name="password" class="form-input" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password">
+                        <button type="button" class="password-toggle-btn" aria-label="Toggle password visibility" onclick="togglePasswordVisibility('reg_password', this)">
+                            <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="password-requirements">Password must be at least 8 characters long.</p>
+                </div>
+
+                <!-- 7. Confirm Password -->
+                <div class="form-group">
+                    <label for="reg_confirm_password" class="form-label">Confirm Password</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </span>
+                        <input type="password" id="reg_confirm_password" name="confirm_password" class="form-input" placeholder="Repeat password" required minlength="8" autocomplete="new-password">
+                        <button type="button" class="password-toggle-btn" aria-label="Toggle password visibility" onclick="togglePasswordVisibility('reg_confirm_password', this)">
+                            <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="regSubmitBtn">
+                    <span>Create Account</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+
+                <div class="auth-signup-wrap">
+                    <a href="#" class="auth-link" id="backToLoginLink">Back to sign in</a>
+                </div>
             </form>
 
             {% endif %}
@@ -277,8 +428,78 @@
             let portal = 'employee';
             const errBox = document.getElementById('loginError');
             const errText = document.getElementById('loginErrorText');
+            const successBox = document.getElementById('loginSuccess');
+            const successText = document.getElementById('loginSuccessText');
             const showError = (m) => { errText.textContent = m; errBox.style.display = 'flex'; };
             const hideError = () => { errBox.style.display = 'none'; };
+
+            const authTitle = document.getElementById('authTitle');
+            const authSubtitle = document.getElementById('authSubtitle');
+            const portalTabs = document.getElementById('portalTabs');
+            const registerForm = document.getElementById('registerForm');
+            const regErrBox = document.getElementById('regError');
+            const regErrText = document.getElementById('regErrorText');
+            const showRegError = (m) => { regErrText.textContent = m; regErrBox.style.display = 'flex'; };
+            const hideRegError = () => { regErrBox.style.display = 'none'; };
+
+            const switchToRegister = () => {
+                if (authTitle) authTitle.textContent = 'Employee Registration';
+                if (authSubtitle) authSubtitle.textContent = 'Create your employee account to access the ThreatSim portal';
+                if (portalTabs) portalTabs.style.display = 'none';
+                loginForm.style.display = 'none';
+                hideError();
+                if (successBox) successBox.style.display = 'none';
+                if (registerForm) {
+                    registerForm.style.display = 'block';
+                    hideRegError();
+                    const firstInput = document.getElementById('reg_full_name');
+                    if (firstInput) firstInput.focus();
+                }
+            };
+
+            const switchToLogin = (prefillUsername = '') => {
+                if (authTitle) authTitle.textContent = 'ThreatSim Security Console';
+                if (authSubtitle) authSubtitle.textContent = 'Sign in with your organization credentials to access the SOC terminal';
+                if (portalTabs) portalTabs.style.display = 'grid';
+                if (registerForm) registerForm.style.display = 'none';
+                hideRegError();
+                loginForm.style.display = 'block';
+
+                portal = 'employee';
+                document.querySelectorAll('.portal-tab').forEach(b => {
+                    const on = b.dataset.portal === 'employee';
+                    b.classList.toggle('active', on);
+                    b.setAttribute('aria-selected', on ? 'true' : 'false');
+                });
+                document.getElementById('portalHint').textContent = 'Employee sign-in';
+                document.getElementById('forgotLink').style.visibility = 'visible';
+                const signupPrompt = document.getElementById('signupPromptWrap');
+                if (signupPrompt) signupPrompt.style.display = 'flex';
+
+                if (prefillUsername) {
+                    document.getElementById('username').value = prefillUsername;
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                } else {
+                    document.getElementById('username').focus();
+                }
+            };
+
+            const goToRegBtn = document.getElementById('goToRegisterLink');
+            if (goToRegBtn) {
+                goToRegBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    switchToRegister();
+                });
+            }
+
+            const backToLogBtn = document.getElementById('backToLoginLink');
+            if (backToLogBtn) {
+                backToLogBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    switchToLogin();
+                });
+            }
 
             document.querySelectorAll('.portal-tab').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -290,8 +511,13 @@
                     });
                     document.getElementById('portalHint').textContent = portal === 'admin' ? 'Administrator sign-in' : 'Employee sign-in';
                     document.getElementById('forgotLink').style.visibility = portal === 'admin' ? 'hidden' : 'visible';
+                    const signupPrompt = document.getElementById('signupPromptWrap');
+                    if (signupPrompt) {
+                        signupPrompt.style.display = portal === 'admin' ? 'none' : 'flex';
+                    }
                     loginForm.reset();
                     hideError();
+                    if (successBox) successBox.style.display = 'none';
                     document.getElementById('username').focus();
                 });
             });
@@ -311,6 +537,7 @@
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 hideError();
+                if (successBox) successBox.style.display = 'none';
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value;
                 if (!username || !password) { showError('Please enter both your username and password.'); return; }
@@ -334,6 +561,84 @@
                     btn.disabled = false; btn.style.opacity = ''; btn.innerHTML = original;
                 }
             });
+
+            if (registerForm) {
+                registerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    hideRegError();
+
+                    const full_name = document.getElementById('reg_full_name').value.trim();
+                    const emp_id = document.getElementById('reg_emp_id').value.trim();
+                    const username = document.getElementById('reg_username').value.trim();
+                    const department = document.getElementById('reg_department').value.trim();
+                    const role = document.getElementById('reg_role').value.trim();
+                    const password = document.getElementById('reg_password').value;
+                    const confirm_password = document.getElementById('reg_confirm_password').value;
+
+                    if (!full_name || !emp_id || !username || !department || !role || !password || !confirm_password) {
+                        showRegError('All fields are required.');
+                        return;
+                    }
+
+                    if (password.length < 8) {
+                        showRegError('Password must be at least 8 characters long.');
+                        return;
+                    }
+
+                    if (password !== confirm_password) {
+                        showRegError('Passwords do not match.');
+                        return;
+                    }
+
+                    if (!/^[a-zA-Z0-9._-]{3,30}$/.test(username)) {
+                        showRegError('Username must be 3-30 characters long and can only contain letters, numbers, dots, underscores, and hyphens.');
+                        return;
+                    }
+
+                    if (username.toLowerCase() === 'ryuu') {
+                        showRegError('The username "Ryuu" is reserved.');
+                        return;
+                    }
+
+                    const btn = document.getElementById('regSubmitBtn');
+                    btn.disabled = true;
+                    btn.style.opacity = '0.75';
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = '<span>Creating account…</span>';
+
+                    try {
+                        const res = await fetch('/api/auth/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                full_name,
+                                emp_id,
+                                username,
+                                department,
+                                role,
+                                password,
+                                confirm_password
+                            })
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            throw new Error(data.error || 'Registration failed.');
+                        }
+                        registerForm.reset();
+                        switchToLogin(data.username || username);
+                        if (successBox && successText) {
+                            successText.textContent = data.message || 'Account created, please sign in';
+                            successBox.style.display = 'flex';
+                        }
+                    } catch (err) {
+                        showRegError(err.message);
+                    } finally {
+                        btn.disabled = false;
+                        btn.style.opacity = '';
+                        btn.innerHTML = originalHtml;
+                    }
+                });
+            }
         }
 
         // ---- Light / dark theme + ASCII fluid hero ----
